@@ -4,7 +4,6 @@ import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../core/network/api_client.dart';
 
-
 class AuthController extends ChangeNotifier {
   final AuthService _authService = AuthService();
 
@@ -113,17 +112,33 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  // --- VERIFY PASSWORD RESET OTP (Step 2: Verifikasi OTP untuk dapat Token) ---
+  Future<String?> verifyPasswordResetOtp(String email, String otp) async {
+    _setLoading(true);
+    final result = await _authService.verifyPasswordResetOtp(email, otp);
+    _setLoading(false);
+
+    if (result.isSuccess && result.data != null) {
+      _clearError();
+      // result.data berisi: {'email': '...', 'reset_token': '...', 'expires_in': 600}
+      return result.data!['reset_token'] as String?;
+    } else {
+      _setError(result.message, result.errors);
+      return null;
+    }
+  }
+
   // --- RESET PASSWORD ---
   Future<bool> resetPassword({
     required String email,
-    required String otp,
+    required String resetToken,
     required String password,
     required String passwordConfirmation,
   }) async {
     _setLoading(true);
     final result = await _authService.resetPassword(
       email: email,
-      otp: otp,
+      resetToken: resetToken,
       password: password,
       passwordConfirmation: passwordConfirmation,
     );
@@ -182,8 +197,15 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  // --- LOGOUT ---
+  Future<void> logout() async {
+    _setLoading(true);
+    await _authService.logout();
+    _user = null;
+    _setLoading(false);
+  }
 
-  /// Dipanggil dari SplashView
+  // -- DETERMINE INITIAL ROUTE ---
   Future<String> determineInitialRoute() async {
     final token = ApiClient.instance.prefs?.getString('token');
 
@@ -205,14 +227,6 @@ class AuthController extends ChangeNotifier {
       await ApiClient.instance.prefs?.remove('token');
       return '/login';
     }
-  }
-
-  // --- LOGOUT ---
-  Future<void> logout() async {
-    _setLoading(true);
-    await _authService.logout();
-    _user = null;
-    _setLoading(false);
   }
 
   // --- HELPERS ---

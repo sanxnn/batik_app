@@ -1,62 +1,81 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../controllers/auth_controller.dart';
+import '../theme/app_theme.dart';
+import '../widgets/auth/auth_layout.dart';
+import '../widgets/auth/auth_text_field.dart';
+import '../widgets/auth/auth_button.dart';
 
 class ResetPasswordView extends StatefulWidget {
-  final String email;
-  const ResetPasswordView({super.key, required this.email});
+  const ResetPasswordView({super.key});
 
   @override
   State<ResetPasswordView> createState() => _ResetPasswordViewState();
 }
 
 class _ResetPasswordViewState extends State<ResetPasswordView> {
-  final _formKey = GlobalKey<FormState>();
-  final _otpCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  final _confirmCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _isSubmitting = false;
+
+  String? _email;
+  String? _resetToken;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    if (args != null) {
+      _email = args['email'] as String?;
+      _resetToken = args['resetToken'] as String?;
+    }
+
+    if (_email == null || _resetToken == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(context, '/forgot-password');
+      });
+    }
+  }
 
   @override
   void dispose() {
-    _otpCtrl.dispose();
     _passwordCtrl.dispose();
-    _confirmCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _handleReset() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_passwordCtrl.text != _confirmCtrl.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Konfirmasi password tidak cocok')),
-      );
-      return;
-    }
+    if (!_formKey.currentState!.validate() || _isSubmitting) return;
+    if (_email == null || _resetToken == null) return;
 
+    setState(() => _isSubmitting = true);
     final controller = context.read<AuthController>();
+
     final success = await controller.resetPassword(
-      email: widget.email,
-      otp: _otpCtrl.text,
+      email: _email!,
+      resetToken: _resetToken!,
       password: _passwordCtrl.text,
-      passwordConfirmation: _confirmCtrl.text,
+      passwordConfirmation: _confirmPasswordCtrl.text,
     );
 
     if (!mounted) return;
+    setState(() => _isSubmitting = false);
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Password berhasil diubah. Silakan login kembali.'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppTheme.success,
         ),
       );
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
+      // Hapus semua halaman dan arahkan ke login
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(controller.errorMessage ?? 'Reset gagal'),
-          backgroundColor: Colors.redAccent,
+          content: Text(controller.errorMessage ?? 'Gagal mengubah password.'),
+          backgroundColor: AppTheme.error,
         ),
       );
     }
@@ -64,76 +83,69 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Reset Password')),
-      body: Consumer<AuthController>(
-        builder: (context, controller, _) {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                children: [
-                  Text('Email: ${widget.email}'),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _otpCtrl,
-                    keyboardType: TextInputType.number,
-                    maxLength: 6,
-                    decoration: const InputDecoration(
-                      labelText: 'Kode OTP',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) =>
-                        v == null || v.length != 6 ? 'OTP harus 6 digit' : null,
+    return Consumer<AuthController>(
+      builder: (context, controller, _) {
+        return AuthLayout(
+          title: 'Buat Password Baru 🔑',
+          subtitle: 'Pastikan password baru Anda mudah diingat namun tetap aman.',
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AuthTextField(
+                  controller: _passwordCtrl,
+                  label: 'Password Baru',
+                  hint: 'Minimal 8 karakter',
+                  icon: Icons.lock_outline,
+                  obscureText: true, // Pastikan widget Anda mendukung properti ini
+                  enabled: !_isSubmitting && !controller.isLoading,
+                  textInputAction: TextInputAction.next,
+                  validator: (value) {
+                    if (value == null || value.trim().length < 8) {
+                      return 'Password minimal 8 karakter';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                AuthTextField(
+                  controller: _confirmPasswordCtrl,
+                  label: 'Konfirmasi Password',
+                  hint: 'Ulangi password baru',
+                  icon: Icons.lock_outline,
+                  obscureText: true,
+                  enabled: !_isSubmitting && !controller.isLoading,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _handleReset(),
+                  validator: (value) {
+                    if (value != _passwordCtrl.text) {
+                      return 'Password tidak cocok';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
+                AuthButton(
+                  text: 'Simpan Password',
+                  icon: Icons.check_circle_outline,
+                  isLoading: _isSubmitting || controller.isLoading,
+                  onPressed: _handleReset,
+                ),
+                const SizedBox(height: 12),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: (_isSubmitting || controller.isLoading) ? null : () => Navigator.maybePop(context),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    label: const Text('Batal'),
+                    style: TextButton.styleFrom(foregroundColor: AppTheme.textSecondary),
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passwordCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Password Baru',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) => (v == null || v.length < 8)
-                        ? 'Password minimal 8 karakter'
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _confirmCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Konfirmasi Password',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (v) => (v == null || v.length < 8)
-                        ? 'Konfirmasi minimal 8 karakter'
-                        : null,
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: controller.isLoading ? null : _handleReset,
-                      child: controller.isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Reset Password'),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }

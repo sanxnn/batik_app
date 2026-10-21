@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiClient {
   late final Dio _dio;
   SharedPreferences? _prefs;
+  bool _isInitialized = false;
 
   ApiClient._internal() {
     final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000/api';
@@ -27,6 +28,15 @@ class ApiClient {
   }
 
   static final ApiClient instance = ApiClient._internal();
+
+  Future<void> init() async {
+    if (_isInitialized) return;
+
+    _prefs = await SharedPreferences.getInstance();
+    _setupInterceptors();
+
+    _isInitialized = true;
+  }
 
   Future<void> _setupInterceptors() async {
     _prefs = await SharedPreferences.getInstance();

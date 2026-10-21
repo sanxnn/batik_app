@@ -25,7 +25,7 @@ class UserModel {
       name: json['name'],
       email: json['email'],
       phone: json['phone'],
-      gender: json['gender'] ?? 'male',
+      gender: json['gender'] ?? 'Male',
       birthDate: json['birth_date'] != null
           ? DateTime.parse(json['birth_date'])
           : null,
@@ -51,7 +51,7 @@ class UserModel {
 
   bool get isEmailVerified => emailVerifiedAt != null;
 
-  String get genderLabel => gender == 'male' ? 'Laki-laki' : 'Perempuan';
+  String get genderLabel => gender == 'Male' ? 'Laki-laki' : 'Perempuan';
 
   String get formattedBirthDate {
     if (birthDate == null) return '-';

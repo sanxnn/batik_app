@@ -65,9 +65,9 @@ class AuthService {
       );
 
       final data = response.data['data'];
-      if (data['token'] != null) {
-        await _prefs?.setString('token', data['token']);
-      }
+      // if (data['token'] != null) {
+      //   await _prefs?.setString('token', data['token']);
+      // }
 
       final user = UserModel.fromJson(data['user']);
       return ApiResult.success(user, message: response.data['message']);
@@ -121,9 +121,36 @@ class AuthService {
     }
   }
 
+  Future<ApiResult<Map<String, dynamic>>> verifyPasswordResetOtp(
+    String email,
+    String otp,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/auth/password/verify-otp',
+        data: {
+          'email': email,
+          'otp': otp,
+        },
+      );
+
+      final data = response.data['data'] as Map<String, dynamic>;
+      
+      return ApiResult.success(
+        data,
+        message: response.data['message'],
+      );
+    } on DioException catch (e) {
+      return ApiResult.error(
+        _extractErrorMessage(e),
+        errors: e.response?.data['errors'],
+      );
+    }
+  }
+
   Future<ApiResult<void>> resetPassword({
     required String email,
-    required String otp,
+    required String resetToken,
     required String password,
     required String passwordConfirmation,
   }) async {
@@ -132,7 +159,7 @@ class AuthService {
         '/auth/password/reset',
         data: {
           'email': email,
-          'otp': otp,
+          'reset_token': resetToken,
           'password': password,
           'password_confirmation': passwordConfirmation,
         },
