@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../controllers/auth_controller.dart';
-import '../theme/app_theme.dart';
-import '../widgets/auth/auth_layout.dart';
-import '../widgets/auth/auth_text_field.dart';
-import '../widgets/auth/auth_button.dart';
+import '../../controllers/auth_controller.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/auth/auth_layout.dart';
+import '../../widgets/auth/auth_text_field.dart';
+import '../../widgets/auth/auth_button.dart';
 
 class ForgotPasswordView extends StatefulWidget {
   const ForgotPasswordView({super.key});

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../controllers/auth_controller.dart';
-import '../theme/app_theme.dart';
-import '../widgets/auth/auth_layout.dart';
-import '../widgets/auth/auth_text_field.dart';
-import '../widgets/auth/auth_button.dart';
+import '../../controllers/auth_controller.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/auth/auth_layout.dart';
+import '../../widgets/auth/auth_text_field.dart';
+import '../../widgets/auth/auth_button.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
@@ -128,7 +128,7 @@ class _RegisterViewState extends State<RegisterView> {
     return Consumer<AuthController>(
       builder: (context, controller, _) {
         return AuthLayout(
-          title: 'Buat akun baru ✨',
+          title: 'Buat akun baru',
           subtitle:
               'Bergabunglah dengan Batik Rubung Kuning '
               'dan temukan cerita di setiap karya.',

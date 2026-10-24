@@ -1,199 +1,210 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/product_controller.dart';
+import '../theme/app_theme.dart';
+import '../widgets/home/home_search_bar.dart';
+import '../widgets/home/category_chip.dart';
+import '../widgets/home/product_card.dart';
 
-class HomeView extends StatelessWidget {
+class HomeView extends StatefulWidget {
   const HomeView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Warna tema (Sesuaikan dengan AppTheme Anda jika ada)
-    const primaryColor = Color(0xFF6D4C41); // Coklat Batik Elegan
-    const bgColors = Color(0xFFF8F9FA);
+  State<HomeView> createState() => _HomeViewState();
+}
 
+class _HomeViewState extends State<HomeView> {
+  final TextEditingController _searchCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch data saat halaman pertama kali dibuka
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProductController>().fetchInitialData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColors,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Beranda',
-          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.black87),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline, color: Colors.black87),
-            onPressed: () => Navigator.pushNamed(context, '/profile'),
-            tooltip: 'Profil Saya',
-          ),
-        ],
-      ),
-      body: Consumer<AuthController>(
-        builder: (context, controller, _) {
-          final user = controller.user;
-          if (user == null) {
-            return const Center(child: CircularProgressIndicator(color: primaryColor));
+      backgroundColor: AppTheme.background,
+      body: Consumer2<AuthController, ProductController>(
+        builder: (context, authCtrl, prodCtrl, _) {
+          final user = authCtrl.user;
+
+          if (prodCtrl.isLoading && prodCtrl.products.isEmpty) {
+            return const Center(child: CircularProgressIndicator(color: AppTheme.primaryDark));
           }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // --- Header Sambutan ---
-                const Text(
-                  'Selamat Datang,',
-                  style: TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  user.name,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // --- Kartu Ringkasan Profil ---
-                Card(
-                  elevation: 4,
-                  shadowColor: primaryColor.withValues(alpha: 0.1),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Row(
+          return CustomScrollView(
+            slivers: [
+              // 1. Sliver AppBar (Header yang menempel saat discroll)
+              SliverAppBar(
+                expandedHeight: 140,
+                floating: true,
+                pinned: true,
+                backgroundColor: AppTheme.background,
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 50, 24, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        CircleAvatar(
-                          radius: 32,
-                          backgroundColor: primaryColor.withValues(alpha: 0.1),
-                          child: Text(
-                            user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                            style: const TextStyle(
-                              color: primaryColor,
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Halo, ${user?.name.split(' ').first ?? 'User'}! 👋',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: AppTheme.textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Temukan Batik Terbaik',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                user.email,
-                                style: const TextStyle(fontSize: 14, color: Colors.black87, fontWeight: FontWeight.w600),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            // Icon Notifikasi / Cart
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppTheme.surface,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppTheme.border),
                               ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(
-                                    user.isEmailVerified ? Icons.verified_user_rounded : Icons.error_outline,
-                                    size: 16,
-                                    color: user.isEmailVerified ? Colors.green : Colors.orange,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    user.isEmailVerified ? 'Akun Terverifikasi' : 'Belum Terverifikasi',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: user.isEmailVerified ? Colors.green : Colors.orange,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 20),
-                          color: Colors.grey[600],
-                          onPressed: () => Navigator.pushNamed(context, '/profile'),
+                              child: const Icon(Icons.shopping_bag_outlined, color: AppTheme.textPrimary, size: 22),
+                            )
+                          ],
                         ),
                       ],
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 32),
-
-                // --- Menu Utama ---
-                const Text(
-                  'Menu Utama',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                ),
-                const SizedBox(height: 16),
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 1.1,
-                  children: const [
-                    _MenuCard(icon: Icons.shopping_bag_outlined, label: 'Produk', color: Colors.blue),
-                    _MenuCard(icon: Icons.category_outlined, label: 'Kategori', color: Colors.purple),
-                    _MenuCard(icon: Icons.shopping_cart_outlined, label: 'Keranjang', color: Colors.orange),
-                    _MenuCard(icon: Icons.receipt_long_outlined, label: 'Pesanan', color: Colors.green),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _MenuCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  const _MenuCard({required this.icon, required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shadowColor: Colors.black12,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Fitur $label segera hadir!'), behavior: SnackBarBehavior.floating),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, size: 32, color: color),
               ),
-              const SizedBox(height: 12),
-              Text(
-                label,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black87),
-                textAlign: TextAlign.center,
+
+              // 2. Konten Utama
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Search Bar
+                      HomeSearchBar(
+                        controller: _searchCtrl,
+                        onSearch: () {
+                          // Logic search nanti
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Kategori (Horizontal Scroll)
+                      const Text(
+                        'Kategori',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 42,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: prodCtrl.categories.length + 1, // +1 untuk "Semua"
+                          separatorBuilder: (_, __) => const SizedBox(width: 10),
+                          itemBuilder: (context, index) {
+                            if (index == 0) {
+                              return CategoryChip(
+                                label: 'Semua',
+                                isSelected: prodCtrl.selectedCategoryId == null,
+                                onTap: () => prodCtrl.selectCategory(null),
+                              );
+                            }
+                            final category = prodCtrl.categories[index - 1];
+                            return CategoryChip(
+                              label: category.name,
+                              isSelected: prodCtrl.selectedCategoryId == category.id,
+                              onTap: () => prodCtrl.selectCategory(category.id),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Grid Produk
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Rekomendasi Untukmu',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                          ),
+                          TextButton(
+                            onPressed: () {},
+                            child: const Text('Lihat Semua', style: TextStyle(color: AppTheme.primaryDark, fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  ),
+                ),
               ),
+
+              // 3. Daftar Produk (Grid)
+              prodCtrl.products.isEmpty
+                  ? const SliverFillRemaining(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.inventory_2_outlined, size: 48, color: AppTheme.textHint),
+                            SizedBox(height: 12),
+                            Text('Belum ada produk tersedia', style: TextStyle(color: AppTheme.textSecondary)),
+                          ],
+                        ),
+                      ),
+                    )
+                  : SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 100), // Padding bawah besar untuk bottom nav
+                      sliver: SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 0.75, // Membuat kartu lebih tinggi agar muat nama & harga
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            return ProductCard(product: prodCtrl.products[index]);
+                          },
+                          childCount: prodCtrl.products.length,
+                        ),
+                      ),
+                    ),
             ],
-          ),
-        ),
+          );
+        },
       ),
     );
   }

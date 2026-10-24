@@ -4,7 +4,7 @@ import 'package:batik_app/widgets/auth/auth_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../controllers/auth_controller.dart';
+import '../../controllers/auth_controller.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -61,7 +61,7 @@ class _LoginViewState extends State<LoginView> {
     return Consumer<AuthController>(
       builder: (context, controller, _) {
         return AuthLayout(
-          title: 'Selamat datang 👋',
+          title: 'Selamat datang!',
           subtitle: 'Masuk dan temukan karya batik yang punya cerita.',
           child: Form(
             key: _formKey,
@@ -70,8 +70,8 @@ class _LoginViewState extends State<LoginView> {
               children: [
                 AuthTextField(
                   controller: _emailCtrl,
-                  label: 'Alamat email',
-                  hint: 'nama@email.com',
+                  label: 'Email',
+                  hint: 'mail@example.com',
                   icon: Icons.alternate_email_rounded,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
