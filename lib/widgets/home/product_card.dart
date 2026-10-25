@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/product_model.dart';
 import '../../theme/app_theme.dart';
+import '../../views/product_detail.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
@@ -42,11 +43,16 @@ class ProductCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: isOutOfStock
-              ? null
-              : () {
-                  // Navigasi ke detail produk nanti
-                },
+          onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProductDetailView(
+                product: product,
+              ),
+            ),
+          );
+        },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
