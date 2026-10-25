@@ -156,7 +156,7 @@ class _HomeViewState extends State<HomeView> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
-                            'Rekomendasi Untukmu',
+                            'Rekomendasi Untukmu Jier',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
                           ),
                           TextButton(
