@@ -172,36 +172,50 @@ class _HomeViewState extends State<HomeView> {
               ),
 
               // 3. Daftar Produk (Grid)
-              prodCtrl.products.isEmpty
-                  ? const SliverFillRemaining(
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.inventory_2_outlined, size: 48, color: AppTheme.textHint),
-                            SizedBox(height: 12),
-                            Text('Belum ada produk tersedia', style: TextStyle(color: AppTheme.textSecondary)),
-                          ],
+                prodCtrl.products.isEmpty
+                    ? const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.shopping_bag_outlined,
+                                size: 55,
+                                color: Color(0xFFD9A400),
+                              ),
+                              SizedBox(height: 12),
+                              Text(
+                                'Belum ada produk tersedia',
+                                style: TextStyle(
+                                  color: Color(0xFF8A8172),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 110),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 14,
+                            childAspectRatio: 0.59,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              return ProductCard(
+                                product: prodCtrl.products[index],
+                              );
+                            },
+                            childCount: prodCtrl.products.length,
+                          ),
                         ),
                       ),
-                    )
-                  : SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 100), // Padding bawah besar untuk bottom nav
-                      sliver: SliverGrid(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          childAspectRatio: 0.75, // Membuat kartu lebih tinggi agar muat nama & harga
-                        ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            return ProductCard(product: prodCtrl.products[index]);
-                          },
-                          childCount: prodCtrl.products.length,
-                        ),
-                      ),
-                    ),
             ],
           );
         },
