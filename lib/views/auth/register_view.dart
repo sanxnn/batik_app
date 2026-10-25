@@ -23,7 +23,7 @@ class _RegisterViewState extends State<RegisterView> {
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
 
-  String _gender = 'male';
+  String _gender = 'Male';
   DateTime? _birthDate;
 
   bool _obscurePassword = true;
