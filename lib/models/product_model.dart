@@ -65,8 +65,8 @@ class ProductModel {
     if (image == null || image!.isEmpty) {
       return 'https://via.placeholder.com/400x400?text=No+Image';
     }
-    // Gabungkan dengan base URL backend Anda (sesuaikan jika perlu)
-    return 'http://welcomed-redbird-vital.ngrok-free.app/storage/$image';
+    // Ganti URL lama dengan route baru yang sudah support CORS
+    return 'http://localhost:8000/api/storage-image/$image';
   }
 }
 
