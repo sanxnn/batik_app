@@ -1,480 +1,284 @@
 import 'package:flutter/material.dart';
+
 import '../models/product_model.dart';
+import '../theme/app_theme.dart';
 
 class ProductDetailView extends StatefulWidget {
   final ProductModel product;
 
-  const ProductDetailView({
-    super.key,
-    required this.product,
-  });
+  const ProductDetailView({super.key, required this.product});
 
   @override
-  State<ProductDetailView> createState() =>
-      _ProductDetailViewState();
+  State<ProductDetailView> createState() => _ProductDetailViewState();
 }
 
 class _ProductDetailViewState extends State<ProductDetailView> {
-  // Warna utama aplikasi.
-  static const Color gold = Color(0xFFFFB800);
-  static const Color goldDark = Color(0xFFE6A000);
-  static const Color cream = Color(0xFFF7F5EF);
-  static const Color dark = Color(0xFF292929);
-  static const Color grey = Color(0xFF858585);
+  late VariantModel _selectedVariant;
+  int _quantity = 1;
 
-  // Jumlah barang yang akan dipesan.
-  int quantity = 1;
+  @override
+  void initState() {
+    super.initState();
+    // Pilih varian pertama yang stoknya > 0, atau varian pertama secara default
+    _selectedVariant = widget.product.variants.firstWhere(
+      (v) => v.stock > 0,
+      orElse: () => widget.product.variants.first,
+    );
+  }
+
+  bool get isPreOrder => _selectedVariant.stock <= 0;
+
+  String _formatPrice(double price) {
+    return 'Rp ${price.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
-    final stock = product.cheapestVariant.stock;
-
-    // Produk dengan stok kosong tetap bisa dipesan.
-    final isPreOrder = stock <= 0;
 
     return Scaffold(
-      backgroundColor: cream,
-
-      // ==========================================
-      // KONTEN DETAIL PRODUK
-      // ==========================================
+      backgroundColor: AppTheme.background,
       body: CustomScrollView(
         slivers: [
-          // FOTO PRODUK
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 370,
-              child: Stack(
-                children: [
-                  // Gambar produk.
-                  Positioned.fill(
-                    child: Container(
-                      color: const Color(0xFFECEBE7),
-                      child: Image.network(
-                        product.imageUrl,
-                        fit: BoxFit.contain,
-                        loadingBuilder: (
-                          context,
-                          child,
-                          loadingProgress,
-                        ) {
-                          if (loadingProgress == null) {
-                            return child;
-                          }
-
-                          return const Center(
-                            child: CircularProgressIndicator(
-                              color: goldDark,
-                            ),
-                          );
-                        },
-                        errorBuilder: (
-                          context,
-                          error,
-                          stackTrace,
-                        ) {
-                          return const Center(
-                            child: Icon(
-                              Icons.image_not_supported_outlined,
-                              size: 65,
-                              color: grey,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-
-                  // Tombol kembali.
-                  Positioned(
-                    top: MediaQuery.of(context).padding.top + 12,
-                    left: 20,
-                    child: _circleButton(
-                      icon: Icons.arrow_back_ios_new_rounded,
-                      onTap: () => Navigator.pop(context),
-                    ),
-                  ),
-
-                  // Tombol favorit.
-                  Positioned(
-                    top: MediaQuery.of(context).padding.top + 12,
-                    right: 20,
-                    child: _circleButton(
-                      icon: Icons.favorite_border_rounded,
-                      onTap: () {
-                        _showMessage(
-                          'Fitur favorit belum diaktifkan.',
-                        );
-                      },
-                    ),
-                  ),
-
-                  // Label status produk.
-                  Positioned(
-                    left: 20,
-                    bottom: 24,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 13,
-                        vertical: 9,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEDB5),
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            isPreOrder
-                                ? Icons.schedule_rounded
-                                : Icons.check_circle_outline_rounded,
-                            size: 17,
-                            color: dark,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            isPreOrder
-                                ? 'Pre-Order'
-                                : 'Siap Dipesan',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: dark,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+          // ==========================================
+          // 1. HEADER GAMBAR PRODUK
+          // ==========================================
+          SliverAppBar(
+            expandedHeight: 380,
+            pinned: true,
+            backgroundColor: AppTheme.background,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            leading: Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.9),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
+              ),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 20,
+                  color: AppTheme.textPrimary,
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            actions: [
+              Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.favorite_border_rounded,
+                    size: 22,
+                    color: AppTheme.textPrimary,
+                  ),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Ditambahkan ke favorit')),
+                    );
+                  },
+                ),
+              ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Hero(
+                tag: 'product_${product.id}',
+                child: Image.network(
+                  product.imageUrl,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: const Color(0xFFF4EAD5),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFE6A000),
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: const Color(0xFFF4EAD5),
+                      child: const Center(
+                        child: Icon(
+                          Icons.image_not_supported_outlined,
+                          size: 60,
+                          color: Color(0xFFB5A17B),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ),
 
           // ==========================================
-          // INFORMASI PRODUK
+          // 2. KONTEN DETAIL PRODUK
           // ==========================================
           SliverToBoxAdapter(
             child: Container(
-              width: double.infinity,
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(26),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(32),
+                  topRight: Radius.circular(32),
                 ),
               ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
-                  22,
                   24,
-                  22,
                   32,
-                ),
+                  24,
+                  100,
+                ), // Padding bawah besar untuk bottom bar
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Nama toko.
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF3CE),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'BATIK RUMBUNG KUNING',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF926500),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
+                    // Kategori & Subkategori
+                    Row(
+                      children: [
+                        if (product.category != null)
+                          _buildChip(product.category!.name),
+                        if (product.subcategory != null) ...[
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.chevron_right,
+                            size: 16,
+                            color: AppTheme.textSecondary,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildChip(product.subcategory!.name),
+                        ],
+                      ],
                     ),
+                    const SizedBox(height: 12),
 
-                    const SizedBox(height: 14),
-
-                    // Nama produk.
+                    // Nama Produk
                     Text(
                       product.name,
                       style: const TextStyle(
-                        fontSize: 23,
+                        fontSize: 24,
                         fontWeight: FontWeight.w800,
-                        color: dark,
+                        color: AppTheme.textPrimary,
                         height: 1.3,
                       ),
                     ),
+                    const SizedBox(height: 16),
 
-                    const SizedBox(height: 10),
-
-                    // Harga produk.
-                    Text(
-                      product.formattedPrice,
-                      style: const TextStyle(
-                        fontSize: 23,
-                        fontWeight: FontWeight.w800,
-                        color: goldDark,
-                      ),
-                    ),
-
-                    const SizedBox(height: 22),
-
-                    // Informasi stok dan Pre-Order.
-                    Container(
-                      padding: const EdgeInsets.all(15),
-                      decoration: BoxDecoration(
-                        color: cream,
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(
-                          color: const Color(0xFFFFE7AE),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 45,
-                            height: 45,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFEDB5),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              isPreOrder
-                                  ? Icons.event_available_rounded
-                                  : Icons.inventory_2_outlined,
-                              color: goldDark,
-                            ),
-                          ),
-
-                          const SizedBox(width: 12),
-
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  isPreOrder
-                                      ? 'Pesan melalui Pre-Order'
-                                      : 'Produk tersedia',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                    color: dark,
-                                  ),
-                                ),
-
-                                const SizedBox(height: 5),
-
-                                Text(
-                                  isPreOrder
-                                      ? 'Stok kosong, tetapi kamu tetap '
-                                          'bisa memesan produk ini.'
-                                      : '$stock produk tersedia dan '
-                                          'siap dipesan.',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: grey,
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Judul pilihan produk.
+                    // Harga & Status Stok/PO
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        const Icon(
-                          Icons.palette_outlined,
-                          color: goldDark,
-                          size: 21,
-                        ),
-                        const SizedBox(width: 9),
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'Pilihan Produk',
-                            style: TextStyle(
-                              fontSize: 16,
+                            _formatPrice(_selectedVariant.price),
+                            style: const TextStyle(
+                              fontSize: 28,
                               fontWeight: FontWeight.w800,
-                              color: dark,
+                              color: Color(0xFFE6A000),
                             ),
                           ),
                         ),
-                        Text(
-                          '${product.variants.length} varian',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: grey,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isPreOrder
+                                ? const Color(0xFF292929)
+                                : const Color(0xFFFFF4E0),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isPreOrder
+                                    ? Icons.schedule_rounded
+                                    : Icons.check_circle_rounded,
+                                size: 16,
+                                color: isPreOrder
+                                    ? Colors.white
+                                    : const Color(0xFFE6A000),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                isPreOrder
+                                    ? 'Pre-Order'
+                                    : 'Stok: ${_selectedVariant.stock}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: isPreOrder
+                                      ? Colors.white
+                                      : const Color(0xFF8A8172),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 12),
+                    const Divider(height: 32, color: Color(0xFFF0F0F0)),
 
-                    // Kartu informasi varian.
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(
-                          color: const Color(0xFFEAE6DC),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF3CE),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.checkroom_outlined,
-                              color: goldDark,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Text(
-                              'Produk Batik',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: dark,
-                              ),
-                            ),
-                          ),
-                          const Icon(
-                            Icons.verified_outlined,
-                            color: goldDark,
-                            size: 20,
-                          ),
-                        ],
+                    // Pilihan Varian
+                    const Text(
+                      'Pilihan Varian',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    _buildVariantSelector(),
 
                     const SizedBox(height: 24),
 
-                    // Judul deskripsi.
+                    // Deskripsi
                     const Text(
                       'Deskripsi Produk',
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: dark,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
                       ),
                     ),
-
-                    const SizedBox(height: 9),
-
-                    // Deskripsi produk.
-                    const Text(
-                      'Temukan keindahan batik dari Batik '
-                      'Rumbung Kuning. Produk ini menghadirkan '
-                      'pilihan batik dengan motif menarik untuk '
-                      'melengkapi koleksi dan kebutuhanmu. '
-                      'Produk yang sedang habis tetap dapat '
-                      'dipesan melalui sistem Pre-Order.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 1.8,
-                        color: grey,
+                    const SizedBox(height: 8),
+                    Text(
+                      product.description ??
+                          'Tidak ada deskripsi untuk produk ini.',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textSecondary,
+                        height: 1.6,
+                        letterSpacing: 0.2,
                       ),
                     ),
-
-                    const SizedBox(height: 26),
-
-                    // Pengatur jumlah pesanan.
-                    const Text(
-                      'Jumlah Pesanan',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: dark,
-                      ),
-                    ),
-
-                    const SizedBox(height: 13),
-
-                    Row(
-                      children: [
-                        _quantityButton(
-                          icon: Icons.remove_rounded,
-                          onTap: quantity > 1
-                              ? () {
-                                  setState(() {
-                                    quantity--;
-                                  });
-                                }
-                              : null,
-                        ),
-
-                        SizedBox(
-                          width: 55,
-                          child: Center(
-                            child: Text(
-                              '$quantity',
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w800,
-                                color: dark,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Jumlah tetap bisa ditambah
-                        // meskipun stok produk kosong.
-                        _quantityButton(
-                          icon: Icons.add_rounded,
-                          onTap: () {
-                            setState(() {
-                              quantity++;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 15),
-
-                    // Informasi tambahan.
-                    if (isPreOrder)
-                      const Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.info_outline_rounded,
-                            color: goldDark,
-                            size: 17,
-                          ),
-                          SizedBox(width: 7),
-                          Expanded(
-                            child: Text(
-                              'Produk akan diproses sesuai '
-                              'ketentuan Pre-Order toko.',
-                              style: TextStyle(
-                                fontSize: 11,
-                                height: 1.5,
-                                color: grey,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
                   ],
                 ),
               ),
@@ -484,94 +288,96 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       ),
 
       // ==========================================
-      // TOMBOL PEMBELIAN BAGIAN BAWAH
+      // 3. BOTTOM ACTION BAR (Tetap di bawah)
       // ==========================================
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(
-            18,
-            12,
-            18,
-            12,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border(
-              top: BorderSide(
-                color: Colors.grey.shade200,
-              ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
             ),
-          ),
+          ],
+        ),
+        child: SafeArea(
           child: Row(
             children: [
-              // Tombol tambah ke keranjang.
-              Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      _showMessage(
-                        isPreOrder
-                            ? '$quantity produk Pre-Order dipilih. '
-                                'Hubungkan tombol ini ke keranjang.'
-                            : '$quantity produk dipilih. '
-                                'Hubungkan tombol ini ke keranjang.',
-                      );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: dark,
-                      side: const BorderSide(
-                        color: Color(0xFFD9D9D9),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                    ),
-                    child: const Text(
-                      'Tambah ke Keranjang',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+              // Quantity Selector
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildQtyButton(Icons.remove, () {
+                      if (_quantity > 1) setState(() => _quantity--);
+                    }),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        _quantity.toString(),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
                       ),
                     ),
-                  ),
+                    _buildQtyButton(Icons.add, () {
+                      // ✅ LOGIKA PO: Quantity tetap bisa ditambah meskipun stok 0
+                      setState(() => _quantity++);
+                    }),
+                  ],
                 ),
               ),
+              const SizedBox(width: 16),
 
-              const SizedBox(width: 10),
-
-              // Tombol beli sekarang.
+              // Tombol Tambah ke Keranjang
               Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      _showMessage(
+                child: ElevatedButton(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Menambahkan ${_quantity}x ${product.name} (${_selectedVariant.name}) ${isPreOrder ? '(Pre-Order)' : ''} ke keranjang',
+                        ),
+                        backgroundColor: AppTheme.primaryDark,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFB800),
+                    foregroundColor: const Color(0xFF292929),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.shopping_cart_outlined, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
                         isPreOrder
-                            ? '$quantity produk Pre-Order dipilih. '
-                                'Hubungkan tombol ini ke checkout.'
-                            : '$quantity produk dipilih. '
-                                'Hubungkan tombol ini ke checkout.',
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: goldDark,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
+                            ? 'Pre-Order Sekarang'
+                            : 'Tambah ke Keranjang',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      'Beli Sekarang',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),
@@ -582,62 +388,105 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     );
   }
 
-  // Tombol bulat di bagian atas gambar.
-  Widget _circleButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.white.withOpacity(0.95),
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: SizedBox(
-          width: 43,
-          height: 43,
-          child: Icon(
-            icon,
-            size: 20,
-            color: dark,
-          ),
+  // ==========================================
+  // HELPER WIDGETS
+  // ==========================================
+
+  Widget _buildChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E0),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFFFE7AE), width: 1),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF8A8172),
         ),
       ),
     );
   }
 
-  // Tombol tambah dan kurang jumlah barang.
-  Widget _quantityButton({
-    required IconData icon,
-    required VoidCallback? onTap,
-  }) {
-    return Material(
-      color: onTap == null
-          ? const Color(0xFFECE9E1)
-          : const Color(0xFFFFEDB5),
-      borderRadius: BorderRadius.circular(11),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(11),
-        child: SizedBox(
-          width: 38,
-          height: 38,
-          child: Icon(
-            icon,
-            size: 19,
-            color: dark,
+  Widget _buildVariantSelector() {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: widget.product.variants.map((variant) {
+        final isSelected = _selectedVariant.id == variant.id;
+        final isVariantPO = variant.stock <= 0;
+
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedVariant = variant;
+              _quantity = 1; // Reset qty saat ganti varian
+            });
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xFFFFB800) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected
+                    ? const Color(0xFFFFB800)
+                    : const Color(0xFFE8E3D9),
+                width: 1.5,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFFFFB800).withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : [],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  variant.name,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? const Color(0xFF292929)
+                        : const Color(0xFF555555),
+                  ),
+                ),
+                if (isVariantPO) ...[
+                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.schedule_rounded,
+                    size: 14,
+                    color: Color(0xFF8A8172),
+                  ),
+                ],
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      }).toList(),
     );
   }
 
-  // Menampilkan notifikasi kepada pengguna.
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
+  Widget _buildQtyButton(IconData icon, VoidCallback onPressed) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          child: Icon(icon, size: 20, color: AppTheme.textPrimary),
+        ),
       ),
     );
   }
