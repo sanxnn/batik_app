@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'cart_view.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/product_controller.dart';
 import '../theme/app_theme.dart';
@@ -101,24 +102,28 @@ class _HomeViewState extends State<HomeView> {
                             ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppTheme.surface,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppTheme.border),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
+                        // Tombol Ikon Tas Ke Halaman Keranjang
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CartView(),
                               ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.shopping_bag_outlined,
-                            color: AppTheme.textPrimary,
-                            size: 22,
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.surface,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppTheme.border),
+                            ),
+                            child: const Icon(
+                              Icons.shopping_bag_outlined,
+                              color: AppTheme.textPrimary,
+                              size: 22,
+                            ),
                           ),
                         ),
                       ],
@@ -185,8 +190,8 @@ class _HomeViewState extends State<HomeView> {
                             prodCtrl.searchQuery.isNotEmpty
                                 ? 'Hasil Pencarian'
                                 : (prodCtrl.selectedCategoryId != null
-                                      ? 'Produk Kategori'
-                                      : 'Rekomendasi Untukmu'),
+                                    ? 'Produk Kategori'
+                                    : 'Rekomendasi Untukmu'),
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
@@ -321,11 +326,11 @@ class _HomeViewState extends State<HomeView> {
                   sliver: SliverGrid(
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          childAspectRatio: 0.62,
-                        ),
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: 0.62,
+                    ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       return ProductCard(product: prodCtrl.products[index]);
                     }, childCount: prodCtrl.products.length),
