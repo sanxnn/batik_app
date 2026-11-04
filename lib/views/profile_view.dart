@@ -1,3 +1,4 @@
+import 'package:batik_app/views/adress_view.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -240,10 +241,10 @@ class _ProfileViewState extends State<ProfileView> {
                   title: 'Alamat Saya',
                   subtitle: 'Kelola alamat pengiriman',
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Halaman Alamat segera hadir!'),
-                        behavior: SnackBarBehavior.floating,
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddressView(), // Ubah dari SnackBar ke halaman ini
                       ),
                     );
                   },
