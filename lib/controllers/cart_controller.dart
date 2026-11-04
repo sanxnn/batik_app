@@ -1,171 +1,167 @@
-import 'dart:convert';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import '../models/cart_model.dart';
 import '../models/product_model.dart';
-
-class CartItemModel {
-  final int cartItemId;
-  final ProductModel product;
-  final VariantModel variant;
-  int quantity;
-
-  CartItemModel({
-    required this.cartItemId,
-    required this.product,
-    required this.variant,
-    required this.quantity,
-  });
-}
+import '../services/cart_service.dart';
 
 class CartController extends ChangeNotifier {
-  static const String _storageKey = 'local_cart_items_v13';
-  List<CartItemModel> _items = [];
+  final CartService _service = CartService();
+
+  CartModel? _cart;
+
   bool _isLoading = false;
+  bool _isUpdating = false;
   String? _errorMessage;
 
-  List<CartItemModel> get items => List.unmodifiable(_items);
+  CartModel? get cart => _cart;
+
   bool get isLoading => _isLoading;
+  bool get isUpdating => _isUpdating;
+
   String? get errorMessage => _errorMessage;
 
-  CartController() {
-    fetchCart();
-  }
+  List<CartItemModel> get items => _cart?.items ?? [];
 
-  // 1. Simpan Data Keranjang ke SharedPreferences (Sesuai persis dengan Json model kamu)
-  Future<void> _saveToStorage() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final List<String> rawList = _items.map((item) {
-        return jsonEncode({
-          'cartItemId': item.cartItemId,
-          'product': {
-            'id': item.product.id,
-            'name': item.product.name,
-            'slug': item.product.slug,
-            'description': item.product.description,
-            'image': item.product.image,
-          },
-          'variant': {
-            'id': item.variant.id,
-            'name': item.variant.name,
-            'sku': item.variant.sku,
-            'price': item.variant.price,
-            'stock': item.variant.stock,
-          },
-          'quantity': item.quantity,
-        });
-      }).toList();
-      await prefs.setStringList(_storageKey, rawList);
-    } catch (e) {
-      debugPrint('Gagal menyimpan keranjang: $e');
-    }
-  }
+  int get totalItems => _cart?.totalItems ?? 0;
 
-  // 2. Baca Data dari Storage pakai ProductModel.fromJson & VariantModel.fromJson milikmu
+  double get totalPrice => _cart?.totalPrice ?? 0;
+
+  bool get isEmpty => items.isEmpty;
+
+  // Mengambil keranjang
   Future<void> fetchCart() async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final List<String>? rawList = prefs.getStringList(_storageKey);
-
-      if (rawList != null && rawList.isNotEmpty) {
-        _items = rawList.map((str) {
-          final Map<String, dynamic> jsonMap = jsonDecode(str);
-          final productMap = Map<String, dynamic>.from(jsonMap['product'] as Map);
-          final variantMap = Map<String, dynamic>.from(jsonMap['variant'] as Map);
-
-          final productObj = ProductModel.fromJson(productMap);
-          final variantObj = VariantModel.fromJson(variantMap);
-
-          return CartItemModel(
-            cartItemId: jsonMap['cartItemId'] as int? ?? DateTime.now().millisecondsSinceEpoch,
-            product: productObj,
-            variant: variantObj,
-            quantity: jsonMap['quantity'] as int? ?? 1,
-          );
-        }).toList();
-      }
+      _cart = await _service.getCart();
     } catch (e) {
-      debugPrint('Gagal membaca keranjang: $e');
-      _items = [];
+      _errorMessage = _getErrorMessage(e);
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // 3. Tambah Produk ke Keranjang
+  // Menambahkan produk
   Future<bool> addToCart({
     required ProductModel product,
     required VariantModel variant,
     required int quantity,
   }) async {
-    _isLoading = true;
+    _errorMessage = null;
+
+    try {
+      _cart = await _service.addToCart(
+        variant: variant,
+        quantity: quantity,
+      );
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = _getErrorMessage(e);
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Mengubah jumlah produk
+  Future<bool> updateQuantity({
+    required int itemId,
+    required int quantity,
+  }) async {
+    if (quantity < 1) return false;
+
+    _isUpdating = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
-      final index = _items.indexWhere(
-        (item) => item.product.id == product.id && item.variant.id == variant.id,
+      _cart = await _service.updateQuantity(
+        itemId: itemId,
+        quantity: quantity,
       );
 
-      if (index != -1) {
-        _items[index].quantity += quantity;
-      } else {
-        _items.add(
-          CartItemModel(
-            cartItemId: DateTime.now().millisecondsSinceEpoch,
-            product: product,
-            variant: variant,
-            quantity: quantity,
-          ),
-        );
-      }
-
-      await _saveToStorage();
-      _errorMessage = null;
       return true;
     } catch (e) {
-      _errorMessage = 'Gagal menambahkan produk ke keranjang';
+      _errorMessage = _getErrorMessage(e);
       return false;
     } finally {
-      _isLoading = false;
+      _isUpdating = false;
       notifyListeners();
     }
   }
 
-  // 4. Tambah Jumlah (+1)
-  Future<void> incrementQuantity(CartItemModel item) async {
-    final index = _items.indexWhere((element) => element.cartItemId == item.cartItemId);
-    if (index != -1) {
-      _items[index].quantity++;
-      await _saveToStorage();
-      notifyListeners();
-    }
-  }
-
-  // 5. Kurangi Jumlah (-1)
-  Future<void> decrementQuantity(CartItemModel item) async {
-    final index = _items.indexWhere((element) => element.cartItemId == item.cartItemId);
-    if (index != -1 && _items[index].quantity > 1) {
-      _items[index].quantity--;
-      await _saveToStorage();
-      notifyListeners();
-    }
-  }
-
-  // 6. Hapus Item Terpilih
-  Future<void> removeSelectedItems(List<int> cartItemIds) async {
-    _items.removeWhere((item) => cartItemIds.contains(item.cartItemId));
-    await _saveToStorage();
+  // Menghapus produk
+  Future<bool> removeItem(int itemId) async {
+    _isUpdating = true;
+    _errorMessage = null;
     notifyListeners();
+
+    try {
+      _cart = await _service.removeItem(itemId);
+      return true;
+    } catch (e) {
+      _errorMessage = _getErrorMessage(e);
+      return false;
+    } finally {
+      _isUpdating = false;
+      notifyListeners();
+    }
   }
 
-  // 7. Bersihkan Keranjang
-  Future<void> clearCart() async {
-    _items.clear();
-    await _saveToStorage();
+  // Mengosongkan keranjang
+  Future<bool> clearCart() async {
+    _isUpdating = true;
+    _errorMessage = null;
     notifyListeners();
+
+    try {
+      _cart = await _service.clearCart();
+      return true;
+    } catch (e) {
+      _errorMessage = _getErrorMessage(e);
+      return false;
+    } finally {
+      _isUpdating = false;
+      notifyListeners();
+    }
+  }
+
+  // Mengambil pesan error dari Dio / Laravel
+  String _getErrorMessage(dynamic error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+
+      if (data is Map) {
+        if (data['errors'] is Map) {
+          final errors = data['errors'] as Map;
+
+          if (errors.isNotEmpty) {
+            final firstError = errors.values.first;
+
+            if (firstError is List && firstError.isNotEmpty) {
+              return firstError.first.toString();
+            }
+          }
+        }
+
+        if (data['message'] != null) {
+          return data['message'].toString();
+        }
+      }
+
+      if (error.response?.statusCode == 401) {
+        return 'Sesi login berakhir. Silakan login kembali.';
+      }
+
+      return error.message ?? 'Terjadi kesalahan pada server.';
+    }
+
+    return error.toString().replaceFirst('Exception: ', '');
   }
 }
