@@ -1,3 +1,4 @@
+import 'package:batik_app/controllers/cart_controller.dart';
 import 'package:batik_app/controllers/product_controller.dart';
 import 'package:batik_app/core/network/api_client.dart';
 import 'package:batik_app/views/main_view.dart';
@@ -27,6 +28,7 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthController()),
         ChangeNotifierProvider(create: (_) => ProductController()),
+        ChangeNotifierProvider(create: (_) => CartController()),
       ],
       child: const MyApp(),
     ),

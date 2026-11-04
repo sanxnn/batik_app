@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../controllers/cart_controller.dart';
 import '../models/product_model.dart';
 import '../theme/app_theme.dart';
 
@@ -152,7 +154,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                   32,
                   24,
                   100,
-                ), // Padding bawah besar untuk bottom bar
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -329,7 +331,6 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                       ),
                     ),
                     _buildQtyButton(Icons.add, () {
-                      // ✅ LOGIKA PO: Quantity tetap bisa ditambah meskipun stok 0
                       setState(() => _quantity++);
                     }),
                   ],
@@ -340,19 +341,47 @@ class _ProductDetailViewState extends State<ProductDetailView> {
               // Tombol Tambah ke Keranjang
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Menambahkan ${_quantity}x ${product.name} (${_selectedVariant.name}) ${isPreOrder ? '(Pre-Order)' : ''} ke keranjang',
+                  onPressed: () async {
+                    final currentProduct = widget.product;
+                    final selectedVar = _selectedVariant;
+
+                    final success =
+                        await context.read<CartController>().addToCart(
+                              product: currentProduct,
+                              variant: selectedVar,
+                              quantity: _quantity,
+                            );
+
+                    if (!context.mounted) return;
+
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Menambahkan ${_quantity}x ${currentProduct.name} (${selectedVar.name}) ${isPreOrder ? '(Pre-Order)' : ''} ke keranjang',
+                          ),
+                          backgroundColor: AppTheme.primaryDark,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                        backgroundColor: AppTheme.primaryDark,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      );
+                    } else {
+                      final err = context.read<CartController>().errorMessage;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            err ?? 'Gagal menambahkan produk ke keranjang',
+                          ),
+                          backgroundColor: AppTheme.error,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFFB800),

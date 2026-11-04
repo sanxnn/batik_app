@@ -1,22 +1,38 @@
-import 'package:batik_app/models/product_model.dart';
-import 'package:batik_app/views/product_detail.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../controllers/cart_controller.dart';
+import '../../models/product_model.dart';
+import '../../theme/app_theme.dart';
+import '../../views/product_detail.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
 
   const ProductCard({super.key, required this.product});
 
+  // Warna-warna khas UI Batik (sesuai file lama)
   static const Color gold = Color(0xFFFFB800);
   static const Color goldDark = Color(0xFFE6A000);
   static const Color cream = Color(0xFFFFFCF5);
   static const Color textDark = Color(0xFF292929);
   static const Color textGrey = Color(0xFF898989);
 
+  String _formatPrice(double price) {
+    return 'Rp ${price.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ✅ LOGIKA PO: Stok 0 dianggap Pre-Order, bukan Habis total
-    final isPreOrder = product.cheapestVariant.stock <= 0;
+    // Logika penentuan varian aktif & stok (sesuai file baru yang aman dari null)
+    final firstVariant = product.variants.isNotEmpty
+        ? product.variants.firstWhere(
+            (v) => v.stock > 0,
+            orElse: () => product.variants.first,
+          )
+        : null;
+
+    final isPreOrder = firstVariant == null || firstVariant.stock <= 0;
 
     return GestureDetector(
       onTap: () {
@@ -45,14 +61,13 @@ class ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // =================================
-            // GAMBAR PRODUK
+            // 1. GAMBAR PRODUK & HERO ANIMATION
             // =================================
             Expanded(
               flex: 6,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // ✅ HERO ANIMATION untuk transisi mulus ke detail
                   Hero(
                     tag: 'product_${product.id}',
                     child: Image.network(
@@ -85,7 +100,7 @@ class ProductCard extends StatelessWidget {
                     ),
                   ),
 
-                  // ✅ LABEL STATUS: Pre-Order atau Tersedia
+                  // LABEL STATUS (Pre-Order atau Tersedia)
                   Positioned(
                     top: 10,
                     left: 10,
@@ -135,6 +150,7 @@ class ProductCard extends StatelessWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Fitur favorit belum tersedia'),
+                              behavior: SnackBarBehavior.floating,
                             ),
                           );
                         },
@@ -149,13 +165,12 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // ✅ LAPISAN GELAP DIHAPUS agar pengguna tahu ini bisa dipesan (PO)
                 ],
               ),
             ),
 
             // =================================
-            // INFORMASI PRODUK
+            // 2. INFORMASI PRODUK & LOGIKA KERANJANG
             // =================================
             Expanded(
               flex: 5,
@@ -189,7 +204,7 @@ class ProductCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            product.formattedPrice,
+                            _formatPrice(firstVariant?.price ?? 0),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -200,6 +215,8 @@ class ProductCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
+
+                        // TOMBOL KERANJANG ORANYE DENGAN LOGIKA CART_CONTROLLER
                         Container(
                           decoration: BoxDecoration(
                             color: gold,
@@ -217,14 +234,50 @@ class ProductCard extends StatelessWidget {
                             shape: const CircleBorder(),
                             child: InkWell(
                               customBorder: const CircleBorder(),
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Silakan hubungkan ke fitur keranjang',
+                              onTap: () async {
+                                if (firstVariant == null) return;
+
+                                final success = await context
+                                    .read<CartController>()
+                                    .addToCart(
+                                      product: product,
+                                      variant: firstVariant,
+                                      quantity: 1,
+                                    );
+
+                                if (!context.mounted) return;
+
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '${product.name} (${firstVariant.name}) ditambahkan ke keranjang!',
+                                      ),
+                                      backgroundColor: AppTheme.primaryDark,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
-                                  ),
-                                );
+                                  );
+                                } else {
+                                  final err = context
+                                      .read<CartController>()
+                                      .errorMessage;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        err ??
+                                            'Gagal menambahkan produk ke keranjang',
+                                      ),
+                                      backgroundColor: AppTheme.error,
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  );
+                                }
                               },
                               child: const Padding(
                                 padding: EdgeInsets.all(9),
