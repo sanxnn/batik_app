@@ -63,7 +63,7 @@ class _MainViewState extends State<MainView> {
               label: 'Beranda',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_cart_outlined),
+              icon: Icon(Icons.shopping_cart_outlined),  
               activeIcon: Icon(Icons.shopping_cart_rounded),
               label: 'Keranjang',
             ),
