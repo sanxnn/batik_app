@@ -236,7 +236,7 @@ class _RegisterViewState extends State<RegisterView> {
                           ),
                         ),
                         DropdownMenuItem(
-                          value: 'female',
+                          value: 'Female',
                           child: Row(
                             children: [
                               Icon(
