@@ -1,92 +1,71 @@
+
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
 import '../core/network/api_client.dart';
-import '../core/utils/api_result.dart';
+import '../models/cart_model.dart';
+import '../models/product_model.dart';
 
 class CartService {
   final Dio _dio = ApiClient.instance.dio;
 
-  Future<Options> _getAuthOptions() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-    return Options(
-      headers: {
-        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+  // Mengambil data keranjang
+  Future<CartModel> getCart() async {
+    final response = await _dio.get('/cart');
+    return _parseCart(response.data);
+  }
+
+  // Menambahkan produk ke keranjang
+  Future<CartModel> addToCart({
+    required VariantModel variant,
+    required int quantity,
+  }) async {
+    final response = await _dio.post(
+      '/cart/items',
+      data: {
+        'product_variant_id': variant.id,
+        'quantity': quantity,
       },
     );
+
+    return _parseCart(response.data);
   }
 
-  String _extractErrorMessage(dynamic e) {
-    if (e is DioException) {
-      if (e.response?.data != null &&
-          e.response!.data is Map &&
-          e.response!.data['message'] != null) {
-        return e.response!.data['message'].toString();
-      }
-    }
-    return 'Gagal terhubung ke server. Periksa koneksi Anda.';
-  }
-
-  // 1. Ambil isi keranjang belanja user
-  Future<ApiResult<dynamic>> getCart() async {
-    try {
-      final options = await _getAuthOptions();
-      final response = await _dio.get('/cart', options: options);
-      return ApiResult.success(response.data['data'] ?? response.data);
-    } catch (e) {
-      return ApiResult.error(_extractErrorMessage(e));
-    }
-  }
-
-  // 2. Tambah produk / varian ke keranjang
-  Future<ApiResult<dynamic>> addToCart({
-    required int productId,
-    required int productVariantId,
+  // Mengubah jumlah produk
+  Future<CartModel> updateQuantity({
+    required int itemId,
     required int quantity,
   }) async {
-    try {
-      final options = await _getAuthOptions();
-      final response = await _dio.post(
-        '/cart/items',
-        data: {
-          'product_id': productId,
-          'product_variant_id': productVariantId,
-          'quantity': quantity,
-        },
-        options: options,
-      );
-      return ApiResult.success(response.data);
-    } catch (e) {
-      return ApiResult.error(_extractErrorMessage(e));
-    }
+    final response = await _dio.put(
+      '/cart/items/$itemId',
+      data: {
+        'quantity': quantity,
+      },
+    );
+
+    return _parseCart(response.data);
   }
 
-  // 3. Update kuantitas
-  Future<ApiResult<dynamic>> updateQuantity({
-    required int cartItemId,
-    required int quantity,
-  }) async {
-    try {
-      final options = await _getAuthOptions();
-      final response = await _dio.put(
-        '/cart/items/$cartItemId',
-        data: {'quantity': quantity},
-        options: options,
-      );
-      return ApiResult.success(response.data);
-    } catch (e) {
-      return ApiResult.error(_extractErrorMessage(e));
-    }
+  // Menghapus satu produk
+  Future<CartModel> removeItem(int itemId) async {
+    final response = await _dio.delete('/cart/items/$itemId');
+    return _parseCart(response.data);
   }
 
-  // 4. Hapus item keranjang
-  Future<ApiResult<dynamic>> removeCartItem(int cartItemId) async {
-    try {
-      final options = await _getAuthOptions();
-      final response = await _dio.delete('/cart/items/$cartItemId', options: options);
-      return ApiResult.success(response.data);
-    } catch (e) {
-      return ApiResult.error(_extractErrorMessage(e));
+  // Mengosongkan keranjang
+  Future<CartModel> clearCart() async {
+    final response = await _dio.delete('/cart');
+    return _parseCart(response.data);
+  }
+
+  CartModel _parseCart(dynamic responseData) {
+    final data = responseData['data'];
+
+    if (data == null || data is! Map) {
+      throw Exception('Format respons keranjang tidak valid.');
     }
+
+    return CartModel.fromJson(
+      Map<String, dynamic>.from(data),
+    );
   }
 }

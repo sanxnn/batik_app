@@ -266,7 +266,7 @@ class _EditProfileViewState extends State<EditProfileView> {
                         backgroundColor: primaryColor,
                         foregroundColor: Colors.white,
                         elevation: 4,
-                        shadowColor: primaryColor.withOpacity(0.3),
+                        shadowColor: primaryColor.withValues(alpha: 0.3),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
