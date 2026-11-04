@@ -222,7 +222,7 @@ class _RegisterViewState extends State<RegisterView> {
                       ),
                       items: const [
                         DropdownMenuItem(
-                          value: 'male',
+                          value: 'Male',
                           child: Row(
                             children: [
                               Icon(
