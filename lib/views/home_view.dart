@@ -105,7 +105,7 @@ class _HomeViewState extends State<HomeView> {
                     _banners[index],
                     width: double.infinity,
                     height: 145,
-                    fit: BoxFit.fill,
+                    fit: BoxFit.cover,
 
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
@@ -210,92 +210,100 @@ class _HomeViewState extends State<HomeView> {
               // ==========================================
               // 1. APP BAR
               // ==========================================
-
-              SliverAppBar(
-                floating: true,
-                toolbarHeight: 64,
-                elevation: 0,
-                scrolledUnderElevation: 0,
-                backgroundColor: AppTheme.background,
-                surfaceTintColor: Colors.transparent,
-                automaticallyImplyLeading: false,
-                titleSpacing: 20,
-
-                title: const Text(
-                  'Rubung Batik Kuning',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: _textDark,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-
-                actions: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 16),
-
-                    child: IconButton(
-                      onPressed: _openCart,
-                      tooltip: 'Keranjang',
-
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: _textDark,
-                        side: const BorderSide(color: _divider),
-
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-
-                        fixedSize: const Size(44, 44),
-                      ),
-
-                      icon: const Icon(Icons.shopping_bag_outlined, size: 21),
+              SliverToBoxAdapter(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF3B2A1A),
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(24),
                     ),
                   ),
-                ],
-              ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // HEADER TOKO
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Rubung Batik Kuning',
+                                    style: TextStyle(
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  SizedBox(height: 3),
+                                  Text(
+                                    'Lestari dalam Gaya',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFFE8D5BE),
+                                    ),
+                                  ),
+                                ],
+                              ),
 
+                              IconButton(
+                                onPressed: _openCart,
+                                style: IconButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: const Color(0xFF3B2A1A),
+                                  fixedSize: const Size(44, 44),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(13),
+                                  ),
+                                ),
+                                icon: const Icon(
+                                  Icons.shopping_bag_outlined,
+                                  size: 21,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // SEARCH BAR
+                          HomeSearchBar(
+                            controller: _searchCtrl,
+                            onChanged: _onSearchChanged,
+                            onSubmitted: _onSearchSubmitted,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               // ==========================================
               // 2. HEADER, SEARCH, DAN BANNER
               // ==========================================
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-
                     children: [
-                      // SEARCH BAR
-                      HomeSearchBar(
-                        controller: _searchCtrl,
-                        onChanged: _onSearchChanged,
-                        onSubmitted: _onSearchSubmitted,
-                      ),
-
-                      const SizedBox(height: 22),
-
                       // ==================================
-                      // BANNER SLIDESHOW
-                      // ==================================
-                      _buildBannerSlider(),
-
-                      const SizedBox(height: 27),
-
-                      // ==================================
-                      // 3. KATEGORI
+                      // KATEGORI PRODUK
                       // ==================================
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
                         children: [
                           const Text(
                             'Kategori',
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
                               color: _textDark,
                             ),
                           ),
@@ -303,7 +311,6 @@ class _HomeViewState extends State<HomeView> {
                           if (prodCtrl.selectedCategoryId != null)
                             GestureDetector(
                               onTap: _resetFilters,
-
                               child: const Text(
                                 'Reset',
                                 style: TextStyle(
@@ -316,64 +323,130 @@ class _HomeViewState extends State<HomeView> {
                         ],
                       ),
 
-                      const SizedBox(height: 13),
+                      const SizedBox(height: 17),
 
+                      // KATEGORI IKON LINGKARAN
                       SizedBox(
-                        height: 40,
-
+                        height: 100,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
-
                           itemCount: prodCtrl.categories.length + 1,
-
-                          separatorBuilder: (_, __) => const SizedBox(width: 9),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 19),
 
                           itemBuilder: (context, index) {
-                            if (index == 0) {
-                              return CategoryChip(
-                                label: 'Semua',
+                            final isAll = index == 0;
 
-                                isSelected: prodCtrl.selectedCategoryId == null,
+                            final category = isAll
+                                ? null
+                                : prodCtrl.categories[index - 1];
 
-                                onTap: () {
-                                  prodCtrl.selectCategory(null);
-                                },
-                              );
+                            final String categoryName =
+                                isAll ? 'Semua' : category!.name;
+
+                            final bool isSelected = isAll
+                                ? prodCtrl.selectedCategoryId == null
+                                : prodCtrl.selectedCategoryId == category!.id;
+
+                            // IKON BERDASARKAN NAMA KATEGORI
+                            IconData categoryIcon;
+
+                            if (isAll) {
+                              categoryIcon = Icons.grid_view_rounded;
+                            } else if (categoryName.toLowerCase().contains('bahan') ||
+                                categoryName.toLowerCase().contains('kain')) {
+                              categoryIcon = Icons.layers_outlined;
+                            } else if (categoryName.toLowerCase().contains('batik')) {
+                              categoryIcon = Icons.checkroom_outlined;
+                            } else if (categoryName.toLowerCase().contains('bundling')) {
+                              categoryIcon = Icons.inventory_2_outlined;
+                            } else {
+                              categoryIcon = Icons.category_outlined;
                             }
 
-                            final category = prodCtrl.categories[index - 1];
-
-                            return CategoryChip(
-                              label: category.name,
-
-                              isSelected:
-                                  prodCtrl.selectedCategoryId == category.id,
-
+                            return GestureDetector(
                               onTap: () {
-                                prodCtrl.selectCategory(category.id);
+                                if (isAll) {
+                                  prodCtrl.selectCategory(null);
+                                } else {
+                                  prodCtrl.selectCategory(category!.id);
+                                }
                               },
+                              child: SizedBox(
+                                width: 65,
+                                child: Column(
+                                  children: [
+                                    AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      width: 55,
+                                      height: 55,
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? const Color(0xFFF29A0C)
+                                            : const Color(0xFFF5EFE8),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? const Color(0xFFF29A0C)
+                                              : const Color(0xFFE9DFD3),
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        categoryIcon,
+                                        size: 25,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : const Color(0xFF704322),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 8),
+
+                                    Text(
+                                      categoryName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        color: isSelected
+                                            ? const Color(0xFF8B5700)
+                                            : _textGrey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                         ),
                       ),
 
+                      const SizedBox(height: 22),
+
+                      // ==================================
+                      // BANNER SLIDESHOW
+                      // ==================================
+                      _buildBannerSlider(),
+
                       const SizedBox(height: 27),
 
                       // ==================================
-                      // 4. HEADER PRODUK
+                      // HEADER PRODUK
                       // ==================================
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
-
                         children: [
                           Expanded(
                             child: Text(
                               prodCtrl.searchQuery.isNotEmpty
                                   ? 'Hasil Pencarian'
                                   : prodCtrl.selectedCategoryId != null
-                                  ? 'Produk Kategori'
-                                  : 'Rekomendasi Untukmu',
-
+                                      ? 'Produk Kategori'
+                                      : 'Rekomendasi Untukmu',
                               style: const TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w700,
@@ -386,7 +459,6 @@ class _HomeViewState extends State<HomeView> {
                               prodCtrl.selectedCategoryId != null)
                             GestureDetector(
                               onTap: _resetFilters,
-
                               child: const Text(
                                 'Hapus filter',
                                 style: TextStyle(
@@ -403,8 +475,10 @@ class _HomeViewState extends State<HomeView> {
 
                       Text(
                         '${prodCtrl.products.length} produk ditemukan',
-
-                        style: const TextStyle(fontSize: 12, color: _textGrey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: _textGrey,
+                        ),
                       ),
 
                       const SizedBox(height: 15),
