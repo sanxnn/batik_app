@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/auth_controller.dart';
-import 'edit_profile_view.dart'; // Pastikan import ini ada setelah file dibuat
+import 'edit_profile_view.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -15,6 +15,7 @@ class ProfileView extends StatefulWidget {
 class _ProfileViewState extends State<ProfileView> {
   final Color primaryColor = const Color(0xFF6D4C41);
 
+  // --- Fungsi Logout ---
   Future<void> _handleLogout() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -27,7 +28,7 @@ class _ProfileViewState extends State<ProfileView> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Colors.red.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -111,31 +112,12 @@ class _ProfileViewState extends State<ProfileView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Profil Saya',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: Colors.black87,
-            fontSize: 18,
-          ),
-        ),
-        actions: [
-          IconButton(
-            onPressed: _handleLogout,
-            icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-            tooltip: 'Logout',
-          ),
-        ],
-      ),
+      backgroundColor: const Color(0xFFF9FAFB),
       body: Consumer<AuthController>(
         builder: (context, authCtrl, _) {
           if (authCtrl.user == null) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFF6D4C41)),
+            return Center(
+              child: CircularProgressIndicator(color: primaryColor),
             );
           }
 
@@ -144,137 +126,208 @@ class _ProfileViewState extends State<ProfileView> {
               ? user.name[0].toUpperCase()
               : '?';
 
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              // --- 1. Header Profil ---
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                // --- 1. Header Banner & Profile Pic ---
+                Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
                   children: [
-                    CircleAvatar(
-                      radius: 35,
-                      backgroundColor: primaryColor.withOpacity(0.1),
-                      child: Text(
-                        initial,
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
+                    // Banner Kuning Atas
+                    Container(
+                      height: 180,
+                      width: double.infinity,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE5A00D),
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(30),
+                          bottomRight: Radius.circular(30),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+
+                    // Foto Profil Lingkaran
+                    Positioned(
+                      top: 110,
+                      child: Stack(
                         children: [
-                          Text(
-                            user.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            child: CircleAvatar(
+                              radius: 50,
+                              backgroundColor: primaryColor.withValues(alpha: 0.15),
+                              child: Text(
+                                initial,
+                                style: TextStyle(
+                                  color: primaryColor,
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            user.email,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
+                          // Badge Ikon Pensil
+                          Positioned(
+                            bottom: 2,
+                            right: 2,
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const EditProfileView(),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF1E293B),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.edit,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.edit_outlined,
-                        color: Color(0xFF6D4C41),
+                  ],
+                ),
+
+                const SizedBox(height: 55),
+
+                // --- 2. Nama & Email Badge ---
+                Text(
+                  user.name,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    user.email,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                // --- 3. Menu Navigasi List ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _buildMenuSection([
+                    _MenuItem(
+                      icon: Icons.edit_outlined,
+                      title: 'Edit Profil',
+                      subtitle: 'Ubah nama, email, dan nomor HP',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfileView(),
+                        ),
                       ),
-                      onPressed: () {
+                    ),
+                    _MenuItem(
+                      icon: Icons.location_on_outlined,
+                      title: 'Alamat Saya',
+                      subtitle: 'Kelola alamat pengiriman',
+                      onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const EditProfileView(),
+                            builder: (context) => const AddressView(),
                           ),
                         );
                       },
                     ),
-                  ],
+                    _MenuItem(
+                      icon: Icons.shopping_bag_outlined,
+                      title: 'Pesanan Saya',
+                      subtitle: 'Lacak status pesanan dan riwayat',
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Halaman Pesanan segera hadir!'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                    ),
+                    _MenuItem(
+                      icon: Icons.help_outline,
+                      title: 'Bantuan & FAQ',
+                      subtitle: 'Pusat bantuan dan pertanyaan umum',
+                      onTap: () {},
+                    ),
+                  ]),
                 ),
-              ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-              // --- 2. Menu Navigasi ---
-              _buildMenuSection([
-                _MenuItem(
-                  icon: Icons.person_outline,
-                  title: 'Edit Profil',
-                  subtitle: 'Ubah nama, email, dan nomor HP',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const EditProfileView(),
+                // --- 4. Tombol Logout Terpisah ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 4,
+                      ),
+                      leading: const Icon(
+                        Icons.logout_rounded,
+                        color: Colors.redAccent,
+                        size: 22,
+                      ),
+                      title: const Text(
+                        'Keluar Akun',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                      onTap: _handleLogout,
                     ),
                   ),
                 ),
-                _MenuItem(
-                  icon: Icons.location_on_outlined,
-                  title: 'Alamat Saya',
-                  subtitle: 'Kelola alamat pengiriman',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AddressView(), // Ubah dari SnackBar ke halaman ini
-                      ),
-                    );
-                  },
-                ),
-                _MenuItem(
-                  icon: Icons.shopping_bag_outlined,
-                  title: 'Pesanan Saya',
-                  subtitle: 'Lacak status pesanan dan riwayat',
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Halaman Pesanan segera hadir!'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
-                ),
-                _MenuItem(
-                  icon: Icons.help_outline,
-                  title: 'Bantuan & FAQ',
-                  subtitle: 'Pusat bantuan dan pertanyaan umum',
-                  onTap: () {},
-                ),
-              ]),
 
-              const SizedBox(height: 32),
-
-              // --- 3. Tombol Logout (Opsional, karena sudah ada di AppBar) ---
-              // Bisa dihapus jika merasa redundan dengan tombol di AppBar
-            ],
+                const SizedBox(height: 30),
+              ],
+            ),
           );
         },
       ),
@@ -286,10 +339,10 @@ class _ProfileViewState extends State<ProfileView> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -304,16 +357,9 @@ class _ProfileViewState extends State<ProfileView> {
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,
-                  vertical: 4,
+                  vertical: 6,
                 ),
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(item.icon, color: primaryColor, size: 24),
-                ),
+                leading: Icon(item.icon, color: Colors.black87, size: 22),
                 title: Text(
                   item.title,
                   style: const TextStyle(
@@ -324,19 +370,19 @@ class _ProfileViewState extends State<ProfileView> {
                 ),
                 subtitle: Text(
                   item.subtitle,
-                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                 ),
                 trailing: const Icon(
                   Icons.chevron_right,
                   color: Colors.grey,
-                  size: 24,
+                  size: 20,
                 ),
                 onTap: item.onTap,
               ),
               if (index < items.length - 1)
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Divider(height: 1, color: Color(0xFFF0F0F0)),
+                  child: Divider(height: 1, color: Color(0xFFF1F5F9)),
                 ),
             ],
           );
