@@ -316,7 +316,7 @@ class _HomeViewState extends State<HomeView> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: AppTheme.primaryDark,
+                                  color: Color.from(alpha: 1, red: 0.898, green: 0.678, blue: 0.071),
                                 ),
                               ),
                             ),
