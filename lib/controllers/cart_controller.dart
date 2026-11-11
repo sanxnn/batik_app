@@ -30,6 +30,12 @@ class CartController extends ChangeNotifier {
 
   bool get isEmpty => items.isEmpty;
 
+  void clearLocal() {
+    _cart = null;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   // Mengambil keranjang
   Future<void> fetchCart() async {
     _isLoading = true;

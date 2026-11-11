@@ -1,4 +1,5 @@
 // lib/models/cart_model.dart
+import '../core/network/image_url.dart';
 
 class CartModel {
   final int id;
@@ -140,15 +141,7 @@ class CartProductModel {
 
   // Mengikuti pola imageUrl pada ProductModel
   String get imageUrl {
-    if (image == null || image!.isEmpty) {
-      return 'https://via.placeholder.com/400x400?text=No+Image';
-    }
-
-    if (image!.startsWith('http://') || image!.startsWith('https://')) {
-      return image!;
-    }
-
-    return 'http://localhost:8000/api/storage-image/$image';
+    return productImageUrl(image);
   }
 }
 

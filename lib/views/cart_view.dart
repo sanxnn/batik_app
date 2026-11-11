@@ -6,6 +6,7 @@ import '../controllers/cart_controller.dart';
 import '../models/cart_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cart/cart_summary.dart';
+import 'checkout_view.dart';
 
 class CartView extends StatefulWidget {
   const CartView({super.key});
@@ -286,6 +287,8 @@ class _CartViewState extends State<CartView> {
           return CartSummary(
             totalItems: controller.totalItems,
             totalPrice: controller.totalPrice,
+            onCheckout: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const CheckoutView())),
           );
         },
       ),

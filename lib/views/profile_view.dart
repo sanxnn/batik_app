@@ -1,8 +1,11 @@
-import 'package:batik_app/views/adress_view.dart';
+import 'package:batik_app/views/address_view.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/auth_controller.dart';
+import '../controllers/address_controller.dart';
+import '../controllers/cart_controller.dart';
+import '../controllers/order_controller.dart';
 import 'edit_profile_view.dart';
 
 class ProfileView extends StatefulWidget {
@@ -105,6 +108,9 @@ class _ProfileViewState extends State<ProfileView> {
     if (confirm == true && mounted) {
       await context.read<AuthController>().logout();
       if (!mounted) return;
+      context.read<CartController>().clearLocal();
+      context.read<AddressController>().clearLocal();
+      context.read<OrderController>().clear();
       Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
     }
   }

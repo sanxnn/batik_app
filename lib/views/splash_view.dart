@@ -71,7 +71,10 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
     if (!mounted) return;
 
     // pushReplacementNamed memastikan user tidak bisa menekan tombol back ke splash screen
-    Navigator.pushReplacementNamed(context, nextRoute);
+    Navigator.pushReplacementNamed(context, nextRoute,
+      arguments: nextRoute == '/verify-email'
+          ? controller.pendingVerificationEmail ?? controller.user?.email
+          : null);
   }
 
   @override
@@ -111,7 +114,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
                 width: 200,
                 height: 200,
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryLight.withOpacity(0.6),
+                  color: AppTheme.primaryLight.withValues(alpha: 0.6),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -137,7 +140,7 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.primary.withOpacity(0.15),
+                              color: AppTheme.primary.withValues(alpha: 0.15),
                               blurRadius: 30,
                               offset: const Offset(0, 15),
                             ),
