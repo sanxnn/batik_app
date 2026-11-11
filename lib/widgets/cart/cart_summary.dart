@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 class CartSummary extends StatelessWidget {
   final int totalItems;
   final double totalPrice;
+  final VoidCallback onCheckout;
 
   const CartSummary({
     super.key,
     required this.totalItems,
     required this.totalPrice,
+    required this.onCheckout,
   });
 
   String _formatPrice(double price) {
@@ -92,7 +94,7 @@ class CartSummary extends StatelessWidget {
               width: double.infinity,
               height: 54,
               child: ElevatedButton(
-                onPressed: null,
+                onPressed: onCheckout,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFFB800),
                   foregroundColor: const Color(0xFF292929),

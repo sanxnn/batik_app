@@ -7,7 +7,6 @@ import 'cart_view.dart';
 import '../controllers/product_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/home/home_search_bar.dart';
-import '../widgets/category/category_chip.dart';
 import '../widgets/product/product_card.dart';
 
 class HomeView extends StatefulWidget {
@@ -331,7 +330,7 @@ class _HomeViewState extends State<HomeView> {
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: prodCtrl.categories.length + 1,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (context, index) =>
                               const SizedBox(width: 19),
 
                           itemBuilder: (context, index) {
@@ -557,7 +556,7 @@ class _HomeViewState extends State<HomeView> {
               // ==========================================
               else if (prodCtrl.products.isNotEmpty)
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
 
                   sliver: SliverGrid(
                     gridDelegate:
@@ -571,6 +570,19 @@ class _HomeViewState extends State<HomeView> {
                     delegate: SliverChildBuilderDelegate((context, index) {
                       return ProductCard(product: prodCtrl.products[index]);
                     }, childCount: prodCtrl.products.length),
+                  ),
+                ),
+              if (prodCtrl.products.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
+                    child: prodCtrl.errorMessage != null
+                        ? TextButton(onPressed: prodCtrl.loadMore,
+                            child: Text('${prodCtrl.errorMessage} — Coba lagi'))
+                        : prodCtrl.canLoadMore
+                            ? OutlinedButton(onPressed: prodCtrl.loadMore,
+                                child: const Text('Muat produk lainnya'))
+                            : const SizedBox.shrink(),
                   ),
                 ),
             ],

@@ -1,5 +1,6 @@
 // models/product_model.dart
 import 'package:batik_app/models/category_model.dart';
+import '../core/network/image_url.dart';
 
 class ProductModel {
   final int id;
@@ -62,11 +63,7 @@ class ProductModel {
   }
 
   String get imageUrl {
-    if (image == null || image!.isEmpty) {
-      return 'https://via.placeholder.com/400x400?text=No+Image';
-    }
-    // Ganti URL lama dengan route baru yang sudah support CORS
-    return 'http://localhost:8000/api/storage-image/$image';
+    return productImageUrl(image);
   }
 }
 

@@ -1,6 +1,5 @@
-
-import 'package:batik_app/controllers/adress_controller.dart';
-import 'package:batik_app/views/form_adress_view.dart';
+import 'package:batik_app/controllers/address_controller.dart';
+import 'package:batik_app/views/form_address_view.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -29,9 +28,7 @@ class _AddressViewState extends State<AddressView> {
   void _openForm({AddressModel? address}) async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => AddressFormView(address: address),
-      ),
+      MaterialPageRoute(builder: (_) => AddressFormView(address: address)),
     );
 
     if (result == true && mounted) {
@@ -72,10 +69,7 @@ class _AddressViewState extends State<AddressView> {
                 ),
               );
             },
-            child: const Text(
-              'Hapus',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -99,21 +93,15 @@ class _AddressViewState extends State<AddressView> {
       body: Consumer<AddressController>(
         builder: (context, controller, child) {
           if (controller.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
-          if (controller.errorMessage != null &&
-              controller.addresses.isEmpty) {
+          if (controller.errorMessage != null && controller.addresses.isEmpty) {
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    controller.errorMessage!,
-                    textAlign: TextAlign.center,
-                  ),
+                  Text(controller.errorMessage!, textAlign: TextAlign.center),
                   const SizedBox(height: 12),
                   ElevatedButton(
                     onPressed: controller.fetchAddresses,
@@ -168,10 +156,7 @@ class _AddressViewState extends State<AddressView> {
               children: [
                 const Text(
                   'Daftar Alamat Pengiriman',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
                 const Text(
@@ -181,10 +166,7 @@ class _AddressViewState extends State<AddressView> {
                 const SizedBox(height: 20),
 
                 ...controller.addresses.map(
-                  (address) => _buildAddressCard(
-                    address,
-                    controller,
-                  ),
+                  (address) => _buildAddressCard(address, controller),
                 ),
 
                 const SizedBox(height: 12),
@@ -196,9 +178,7 @@ class _AddressViewState extends State<AddressView> {
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 50),
                     foregroundColor: AppTheme.primaryDark,
-                    side: const BorderSide(
-                      color: AppTheme.primaryDark,
-                    ),
+                    side: const BorderSide(color: AppTheme.primaryDark),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -212,10 +192,7 @@ class _AddressViewState extends State<AddressView> {
     );
   }
 
-  Widget _buildAddressCard(
-    AddressModel address,
-    AddressController controller,
-  ) {
+  Widget _buildAddressCard(AddressModel address, AddressController controller) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -223,9 +200,7 @@ class _AddressViewState extends State<AddressView> {
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: address.isPrimary
-              ? AppTheme.primaryDark
-              : AppTheme.border,
+          color: address.isPrimary ? AppTheme.primaryDark : AppTheme.border,
           width: address.isPrimary ? 1.5 : 1,
         ),
       ),
@@ -255,7 +230,7 @@ class _AddressViewState extends State<AddressView> {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.12),
+                    color: Colors.green.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
@@ -274,18 +249,12 @@ class _AddressViewState extends State<AddressView> {
 
           Text(
             address.recipientName,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
           ),
 
           const SizedBox(height: 4),
 
-          Text(
-            address.phone,
-            style: const TextStyle(color: Colors.grey),
-          ),
+          Text(address.phone, style: const TextStyle(color: Colors.grey)),
 
           const SizedBox(height: 10),
 
@@ -294,10 +263,7 @@ class _AddressViewState extends State<AddressView> {
             '${address.district == null ? '' : '${address.district}, '}'
             '${address.city}, ${address.province}, '
             '${address.postalCode}',
-            style: const TextStyle(
-              height: 1.5,
-              color: AppTheme.textSecondary,
-            ),
+            style: const TextStyle(height: 1.5, color: AppTheme.textSecondary),
           ),
 
           const Divider(height: 25),
@@ -319,18 +285,13 @@ class _AddressViewState extends State<AddressView> {
                   size: 17,
                   color: Colors.red,
                 ),
-                label: const Text(
-                  'Hapus',
-                  style: TextStyle(color: Colors.red),
-                ),
+                label: const Text('Hapus', style: TextStyle(color: Colors.red)),
               ),
 
               if (!address.isPrimary)
                 TextButton(
                   onPressed: () async {
-                    final success = await controller.setPrimary(
-                      address.id,
-                    );
+                    final success = await controller.setPrimary(address.id);
 
                     if (!mounted) return;
 

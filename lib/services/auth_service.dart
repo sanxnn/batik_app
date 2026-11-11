@@ -1,12 +1,12 @@
 import 'package:dio/dio.dart';
 
 import '../core/network/api_client.dart';
+import '../core/network/token_store.dart';
 import '../core/utils/api_result.dart';
 import '../models/user_model.dart';
 
 class AuthService {
   final Dio _dio = ApiClient.instance.dio;
-  final _prefs = ApiClient.instance.prefs;
 
   String _extractErrorMessage(DioException e) {
     if (e.response?.data['message'] != null) {
@@ -28,7 +28,7 @@ class AuthService {
 
       final data = response.data['data'];
       if (data['token'] != null) {
-        await _prefs?.setString('token', data['token']);
+        await TokenStore.instance.save(data['token'].toString());
       }
 
       final user = UserModel.fromJson(data['user']);
@@ -65,10 +65,6 @@ class AuthService {
       );
 
       final data = response.data['data'];
-      // if (data['token'] != null) {
-      //   await _prefs?.setString('token', data['token']);
-      // }
-
       final user = UserModel.fromJson(data['user']);
       return ApiResult.success(user, message: response.data['message']);
     } on DioException catch (e) {
@@ -128,18 +124,12 @@ class AuthService {
     try {
       final response = await _dio.post(
         '/auth/password/verify-otp',
-        data: {
-          'email': email,
-          'otp': otp,
-        },
+        data: {'email': email, 'otp': otp},
       );
 
       final data = response.data['data'] as Map<String, dynamic>;
-      
-      return ApiResult.success(
-        data,
-        message: response.data['message'],
-      );
+
+      return ApiResult.success(data, message: response.data['message']);
     } on DioException catch (e) {
       return ApiResult.error(
         _extractErrorMessage(e),
@@ -164,6 +154,7 @@ class AuthService {
           'password_confirmation': passwordConfirmation,
         },
       );
+      await TokenStore.instance.clear();
       return ApiResult.success(null, message: response.data['message']);
     } on DioException catch (e) {
       return ApiResult.error(
@@ -218,7 +209,7 @@ class AuthService {
     } catch (_) {
       // Abaikan error jaringan saat logout
     } finally {
-      await _prefs?.remove('token');
+      await TokenStore.instance.clear();
     }
     return ApiResult.success(null, message: 'Logout berhasil');
   }

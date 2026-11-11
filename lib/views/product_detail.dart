@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../controllers/cart_controller.dart';
 import '../models/product_model.dart';
+import '../services/product_service.dart';
 import '../theme/app_theme.dart';
 
 class ProductDetailView extends StatefulWidget {
@@ -15,17 +16,43 @@ class ProductDetailView extends StatefulWidget {
 }
 
 class _ProductDetailViewState extends State<ProductDetailView> {
+  late ProductModel _product;
   late VariantModel _selectedVariant;
   int _quantity = 1;
 
   @override
   void initState() {
     super.initState();
+    _product = widget.product;
     // Pilih varian pertama yang stoknya > 0, atau varian pertama secara default
     _selectedVariant = widget.product.variants.firstWhere(
       (v) => v.stock > 0,
-      orElse: () => widget.product.variants.first,
+      orElse: () => widget.product.variants.isEmpty
+          ? widget.product.cheapestVariant
+          : widget.product.variants.first,
     );
+    _refreshProduct();
+  }
+
+  Future<void> _refreshProduct() async {
+    final result = await ProductService().getProduct(widget.product.id);
+    if (!mounted || !result.isSuccess || result.data == null) return;
+    setState(() {
+      _product = result.data!;
+      final variants = _product.variants;
+      _selectedVariant = variants.isEmpty
+          ? _product.cheapestVariant
+          : variants.firstWhere(
+              (variant) => variant.id == _selectedVariant.id,
+              orElse: () => variants.firstWhere(
+                (variant) => variant.stock > 0,
+                orElse: () => variants.first,
+              ),
+            );
+      if (_selectedVariant.stock > 0 && _quantity > _selectedVariant.stock) {
+        _quantity = _selectedVariant.stock;
+      }
+    });
   }
 
   bool get isPreOrder => _selectedVariant.stock <= 0;
@@ -36,7 +63,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
 
   @override
   Widget build(BuildContext context) {
-    final product = widget.product;
+    final product = _product;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -149,12 +176,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                 ),
               ),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  24,
-                  32,
-                  24,
-                  100,
-                ),
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -331,7 +353,10 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                       ),
                     ),
                     _buildQtyButton(Icons.add, () {
-                      setState(() => _quantity++);
+                      if (_selectedVariant.stock <= 0 ||
+                          _quantity < _selectedVariant.stock) {
+                        setState(() => _quantity++);
+                      }
                     }),
                   ],
                 ),
@@ -341,48 +366,54 @@ class _ProductDetailViewState extends State<ProductDetailView> {
               // Tombol Tambah ke Keranjang
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () async {
-                    final currentProduct = widget.product;
-                    final selectedVar = _selectedVariant;
+                  onPressed: _product.variants.isEmpty
+                      ? null
+                      : () async {
+                          final currentProduct = _product;
+                          final selectedVar = _selectedVariant;
 
-                    final success =
-                        await context.read<CartController>().addToCart(
-                              product: currentProduct,
-                              variant: selectedVar,
-                              quantity: _quantity,
+                          final success = await context
+                              .read<CartController>()
+                              .addToCart(
+                                product: currentProduct,
+                                variant: selectedVar,
+                                quantity: _quantity,
+                              );
+
+                          if (!context.mounted) return;
+
+                          if (success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Menambahkan ${_quantity}x ${currentProduct.name} (${selectedVar.name}) ${isPreOrder ? '(Pre-Order)' : ''} ke keranjang',
+                                ),
+                                backgroundColor: AppTheme.primaryDark,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
                             );
-
-                    if (!context.mounted) return;
-
-                    if (success) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Menambahkan ${_quantity}x ${currentProduct.name} (${selectedVar.name}) ${isPreOrder ? '(Pre-Order)' : ''} ke keranjang',
-                          ),
-                          backgroundColor: AppTheme.primaryDark,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      );
-                    } else {
-                      final err = context.read<CartController>().errorMessage;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            err ?? 'Gagal menambahkan produk ke keranjang',
-                          ),
-                          backgroundColor: AppTheme.error,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      );
-                    }
-                  },
+                          } else {
+                            final err = context
+                                .read<CartController>()
+                                .errorMessage;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  err ??
+                                      'Gagal menambahkan produk ke keranjang',
+                                ),
+                                backgroundColor: AppTheme.error,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFFFB800),
                     foregroundColor: const Color(0xFF292929),
@@ -444,7 +475,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     return Wrap(
       spacing: 10,
       runSpacing: 10,
-      children: widget.product.variants.map((variant) {
+      children: _product.variants.map((variant) {
         final isSelected = _selectedVariant.id == variant.id;
         final isVariantPO = variant.stock <= 0;
 

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
-import '../core/network/api_client.dart';
+import '../core/network/token_store.dart';
 
 class AuthController extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -11,11 +12,13 @@ class AuthController extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   Map<String, dynamic>? _validationErrors;
+  String? _pendingVerificationEmail;
 
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   Map<String, dynamic>? get validationErrors => _validationErrors;
+  String? get pendingVerificationEmail => _pendingVerificationEmail;
   bool get isLoggedIn => _user != null;
 
   // --- LOGIN ---
@@ -26,6 +29,7 @@ class AuthController extends ChangeNotifier {
 
     if (result.isSuccess) {
       _user = result.data;
+      await _storePendingVerificationEmail(null);
       _clearError();
       return true;
     } else {
@@ -58,6 +62,7 @@ class AuthController extends ChangeNotifier {
 
     if (result.isSuccess) {
       _user = result.data;
+      await _storePendingVerificationEmail(email);
       _clearError();
       return true;
     } else {
@@ -74,6 +79,7 @@ class AuthController extends ChangeNotifier {
 
     if (result.isSuccess) {
       if (result.data != null) _user = result.data;
+      await _storePendingVerificationEmail(null);
       _clearError();
       return true;
     } else {
@@ -161,6 +167,9 @@ class AuthController extends ChangeNotifier {
 
     if (result.isSuccess) {
       _user = result.data;
+      await _storePendingVerificationEmail(
+        result.data?.isEmailVerified == false ? result.data!.email : null,
+      );
       _clearError();
       return true;
     } else {
@@ -189,6 +198,9 @@ class AuthController extends ChangeNotifier {
 
     if (result.isSuccess) {
       _user = result.data;
+      await _storePendingVerificationEmail(
+        result.data?.isEmailVerified == false ? result.data!.email : null,
+      );
       _clearError();
       return true;
     } else {
@@ -202,15 +214,18 @@ class AuthController extends ChangeNotifier {
     _setLoading(true);
     await _authService.logout();
     _user = null;
+    await _storePendingVerificationEmail(null);
     _setLoading(false);
   }
 
   // -- DETERMINE INITIAL ROUTE ---
   Future<String> determineInitialRoute() async {
-    final token = ApiClient.instance.prefs?.getString('token');
+    final token = TokenStore.instance.token;
+    _pendingVerificationEmail = (await SharedPreferences.getInstance())
+        .getString('pending_verification_email');
 
     if (token == null || token.isEmpty) {
-      return '/login';
+      return _pendingVerificationEmail == null ? '/login' : '/verify-email';
     }
 
     final result = await _authService.getMe();
@@ -219,17 +234,28 @@ class AuthController extends ChangeNotifier {
       _user = result.data;
 
       if (!result.data!.isEmailVerified) {
+        await _storePendingVerificationEmail(result.data!.email);
         return '/verify-email';
       }
 
+      await _storePendingVerificationEmail(null);
       return '/home';
     } else {
-      await ApiClient.instance.prefs?.remove('token');
-      return '/login';
+      return _pendingVerificationEmail == null ? '/login' : '/verify-email';
     }
   }
 
   // --- HELPERS ---
+  Future<void> _storePendingVerificationEmail(String? email) async {
+    final preferences = await SharedPreferences.getInstance();
+    _pendingVerificationEmail = email;
+    if (email == null) {
+      await preferences.remove('pending_verification_email');
+    } else {
+      await preferences.setString('pending_verification_email', email);
+    }
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();

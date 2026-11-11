@@ -1,6 +1,7 @@
-import 'package:batik_app/controllers/adress_controller.dart';
+import 'package:batik_app/controllers/address_controller.dart';
 import 'package:batik_app/controllers/cart_controller.dart';
 import 'package:batik_app/controllers/product_controller.dart';
+import 'package:batik_app/controllers/order_controller.dart';
 import 'package:batik_app/core/network/api_client.dart';
 import 'package:batik_app/views/main_view.dart';
 import 'package:batik_app/views/auth/reset_password_otp_view.dart';
@@ -31,6 +32,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ProductController()),
         ChangeNotifierProvider(create: (_) => CartController()),
         ChangeNotifierProvider(create: (_) => AddressController()),
+        ChangeNotifierProvider(create: (_) => OrderController()),
       ],
       child: const MyApp(),
     ),

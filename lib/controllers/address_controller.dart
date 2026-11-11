@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../models/address_model.dart';
@@ -19,6 +18,12 @@ class AddressController extends ChangeNotifier {
   bool get isSaving => _isSaving;
 
   String? get errorMessage => _errorMessage;
+
+  void clearLocal() {
+    _addresses = [];
+    _errorMessage = null;
+    notifyListeners();
+  }
 
   AddressModel? get primaryAddress {
     try {
@@ -66,10 +71,7 @@ class AddressController extends ChangeNotifier {
   }
 
   // Mengedit alamat
-  Future<bool> updateAddress(
-    int id,
-    Map<String, dynamic> data,
-  ) async {
+  Future<bool> updateAddress(int id, Map<String, dynamic> data) async {
     _isSaving = true;
     notifyListeners();
 

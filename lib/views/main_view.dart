@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'home_view.dart';
 import 'profile_view.dart';
-// Import placeholder view (buat file ini nanti, atau hapus sementara jika belum butuh)
 import 'cart_view.dart';
 import 'order_view.dart';
 
@@ -18,8 +17,8 @@ class _MainViewState extends State<MainView> {
 
   final List<Widget> _pages = const [
     HomeView(), // Tab 0: Beranda
-    CartView(), // Tab 1: Keranjang (Placeholder)
-    OrderView(), // Tab 2: Pesanan (Placeholder)
+    CartView(),
+    OrderView(),
     ProfileView(), // Tab 3: Profil
   ];
 
@@ -34,7 +33,7 @@ class _MainViewState extends State<MainView> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -5),
             ),

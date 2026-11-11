@@ -1,15 +1,16 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import 'token_store.dart';
 
 class ApiClient {
   late final Dio _dio;
-  SharedPreferences? _prefs;
   bool _isInitialized = false;
 
   ApiClient._internal() {
-    final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000/api';
+    final baseUrl = dotenv.env['API_BASE_URL'] ??
+        'https://batikrubungkuning.sanxnn.my.id/api';
 
     _dio = Dio(
       BaseOptions(
@@ -19,12 +20,9 @@ class ApiClient {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
         },
       ),
     );
-
-    _setupInterceptors();
   }
 
   static final ApiClient instance = ApiClient._internal();
@@ -32,19 +30,17 @@ class ApiClient {
   Future<void> init() async {
     if (_isInitialized) return;
 
-    _prefs = await SharedPreferences.getInstance();
+    await TokenStore.instance.init();
     _setupInterceptors();
 
     _isInitialized = true;
   }
 
-  Future<void> _setupInterceptors() async {
-    _prefs = await SharedPreferences.getInstance();
-
+  void _setupInterceptors() {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          final token = _prefs?.getString('token');
+          final token = TokenStore.instance.token;
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
@@ -52,7 +48,7 @@ class ApiClient {
         },
         onError: (DioException e, handler) async {
           if (e.response?.statusCode == 401) {
-            await _prefs?.remove('token');
+            await TokenStore.instance.clear();
             debugPrint('⚠️ Sesi berakhir (401), token dihapus.');
           }
           return handler.next(e);
@@ -62,5 +58,4 @@ class ApiClient {
   }
 
   Dio get dio => _dio;
-  SharedPreferences? get prefs => _prefs;
 }

@@ -1,5 +1,4 @@
-
-import 'package:batik_app/controllers/adress_controller.dart';
+import 'package:batik_app/controllers/address_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,10 +8,7 @@ import '../theme/app_theme.dart';
 class AddressFormView extends StatefulWidget {
   final AddressModel? address;
 
-  const AddressFormView({
-    super.key,
-    this.address,
-  });
+  const AddressFormView({super.key, this.address});
 
   @override
   State<AddressFormView> createState() => _AddressFormViewState();
@@ -41,20 +37,12 @@ class _AddressFormViewState extends State<AddressFormView> {
     final address = widget.address;
 
     _labelCtrl = TextEditingController(text: address?.label ?? '');
-    _recipientCtrl = TextEditingController(
-      text: address?.recipientName ?? '',
-    );
+    _recipientCtrl = TextEditingController(text: address?.recipientName ?? '');
     _phoneCtrl = TextEditingController(text: address?.phone ?? '');
-    _provinceCtrl = TextEditingController(
-      text: address?.province ?? '',
-    );
+    _provinceCtrl = TextEditingController(text: address?.province ?? '');
     _cityCtrl = TextEditingController(text: address?.city ?? '');
-    _districtCtrl = TextEditingController(
-      text: address?.district ?? '',
-    );
-    _postalCtrl = TextEditingController(
-      text: address?.postalCode ?? '',
-    );
+    _districtCtrl = TextEditingController(text: address?.district ?? '');
+    _postalCtrl = TextEditingController(text: address?.postalCode ?? '');
     _detailCtrl = TextEditingController(text: address?.detail ?? '');
 
     _isPrimary = address?.isPrimary ?? false;
@@ -122,9 +110,7 @@ class _AddressFormViewState extends State<AddressFormView> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            controller.errorMessage ?? 'Gagal menyimpan alamat.',
-          ),
+          content: Text(controller.errorMessage ?? 'Gagal menyimpan alamat.'),
         ),
       );
     }
@@ -170,15 +156,11 @@ class _AddressFormViewState extends State<AddressFormView> {
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: AppTheme.border,
-                ),
+                borderSide: const BorderSide(color: AppTheme.border),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: AppTheme.border,
-                ),
+                borderSide: const BorderSide(color: AppTheme.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -201,9 +183,7 @@ class _AddressFormViewState extends State<AddressFormView> {
       appBar: AppBar(
         title: Text(
           isEdit ? 'Edit Alamat' : 'Tambah Alamat',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppTheme.background,
         surfaceTintColor: Colors.transparent,
@@ -216,10 +196,7 @@ class _AddressFormViewState extends State<AddressFormView> {
           children: [
             const Text(
               'Informasi Penerima',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
@@ -249,10 +226,7 @@ class _AddressFormViewState extends State<AddressFormView> {
 
             const Text(
               'Detail Alamat',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 16),
@@ -317,10 +291,7 @@ class _AddressFormViewState extends State<AddressFormView> {
                 },
                 title: const Text(
                   'Jadikan alamat utama',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 ),
                 subtitle: const Text(
                   'Gunakan alamat ini sebagai alamat pengiriman utama.',
@@ -338,9 +309,7 @@ class _AddressFormViewState extends State<AddressFormView> {
                 return SizedBox(
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: controller.isSaving
-                        ? null
-                        : _saveAddress,
+                    onPressed: controller.isSaving ? null : _saveAddress,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryDark,
                       foregroundColor: Colors.white,

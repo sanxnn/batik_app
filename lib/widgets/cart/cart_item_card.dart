@@ -48,7 +48,7 @@ class CartItemCard extends StatelessWidget {
               width: 90,
               height: 100,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (context, error, stackTrace) => Container(
                 width: 90,
                 height: 100,
                 color: const Color(0xFFF4EAD5),

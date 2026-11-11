@@ -36,7 +36,7 @@ class _EditProfileViewState extends State<EditProfileView> {
         _nameCtrl.text = user.name;
         _emailCtrl.text = user.email;
         _phoneCtrl.text = user.phone ?? '';
-        _gender = user.gender ?? 'Male'; // Fallback jika null
+        _gender = user.gender;
         _birthDate = user.birthDate ?? DateTime(2000, 1, 1);
         _isInitialized = true;
       }
@@ -98,8 +98,12 @@ class _EditProfileViewState extends State<EditProfileView> {
     );
 
     if (success) {
-      // Opsional: Kembali ke halaman profil sebelumnya setelah berhasil
-      Navigator.pop(context);
+      if (controller.user?.isEmailVerified == false) {
+        Navigator.pushNamedAndRemoveUntil(context, '/verify-email', (_) => false,
+          arguments: controller.user!.email);
+      } else {
+        Navigator.pop(context);
+      }
     }
   }
 
