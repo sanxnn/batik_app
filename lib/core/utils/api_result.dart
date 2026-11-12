@@ -5,8 +5,8 @@ class ApiResult<T> {
   final bool isSuccess;
 
   ApiResult.success(this.data, {this.message = 'Berhasil'})
-      : isSuccess = true,
-        errors = null;
+    : isSuccess = true,
+      errors = null;
 
   ApiResult.error(this.message, {this.data, this.errors}) : isSuccess = false;
 }

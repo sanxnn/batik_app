@@ -10,8 +10,9 @@ class ProductService {
   ProductService({Dio? dio}) : _dio = dio ?? ApiClient.instance.dio;
 
   String _extractErrorMessage(DioException e) {
-    if (e.response?.data['message'] != null) {
-      return e.response!.data['message'];
+    final body = e.response?.data;
+    if (body is Map && body['message'] != null) {
+      return body['message'].toString();
     }
     return 'Gagal memuat data. Periksa koneksi Anda.';
   }

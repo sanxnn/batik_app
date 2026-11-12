@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 class CartQuantitySelector extends StatelessWidget {
@@ -36,10 +35,7 @@ class CartQuantitySelector extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
               quantity.toString(),
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
             ),
           ),
           _button(

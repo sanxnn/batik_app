@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../controllers/auth_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth/auth_layout.dart';
@@ -32,7 +33,10 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
     setState(() => _isSubmitting = true);
     final controller = context.read<AuthController>();
 
-    final success = await controller.verifyEmail(widget.email, _otpCtrl.text.trim());
+    final success = await controller.verifyEmail(
+      widget.email,
+      _otpCtrl.text.trim(),
+    );
 
     if (!mounted) return;
     setState(() => _isSubmitting = false);
@@ -59,7 +63,7 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
   Future<void> _handleResend() async {
     if (_isSubmitting) return;
     setState(() => _isSubmitting = true);
-    
+
     final controller = context.read<AuthController>();
     final success = await controller.resendOtp(widget.email);
 
@@ -68,7 +72,11 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(success ? 'OTP baru berhasil dikirim.' : (controller.errorMessage ?? 'Gagal mengirim ulang OTP.')),
+        content: Text(
+          success
+              ? 'OTP baru berhasil dikirim.'
+              : (controller.errorMessage ?? 'Gagal mengirim ulang OTP.'),
+        ),
         backgroundColor: success ? AppTheme.success : AppTheme.error,
       ),
     );
@@ -94,14 +102,24 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.mark_email_read_outlined, size: 48, color: AppTheme.primaryDark),
+                      const Icon(
+                        Icons.mark_email_read_outlined,
+                        size: 48,
+                        color: AppTheme.primaryDark,
+                      ),
                       const SizedBox(height: 12),
-                      const Text('Kode OTP dikirim ke', textAlign: TextAlign.center),
+                      const Text(
+                        'Kode OTP dikirim ke',
+                        textAlign: TextAlign.center,
+                      ),
                       const SizedBox(height: 6),
                       Text(
                         widget.email,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                        ),
                       ),
                     ],
                   ),
@@ -119,8 +137,12 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
                   onSubmitted: (_) => _handleVerify(),
                   validator: (value) {
                     final otp = value?.trim() ?? '';
-                    if (otp.length != 6) return 'OTP harus terdiri dari  itik';
-                    if (!RegExp(r'^\d{6}$').hasMatch(otp)) return 'OTP hanya boleh berisi angka';
+                    if (otp.length != 6) {
+                      return 'OTP harus terdiri dari 6 digit';
+                    }
+                    if (!RegExp(r'^\d{6}$').hasMatch(otp)) {
+                      return 'OTP hanya boleh berisi angka';
+                    }
                     return null;
                   },
                 ),
@@ -134,17 +156,23 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
                 const SizedBox(height: 12),
                 Center(
                   child: TextButton(
-                    onPressed: (_isSubmitting || controller.isLoading) ? null : _handleResend,
+                    onPressed: (_isSubmitting || controller.isLoading)
+                        ? null
+                        : _handleResend,
                     child: const Text('Kirim Ulang OTP'),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Center(
                   child: TextButton.icon(
-                    onPressed: (_isSubmitting || controller.isLoading) ? null : () => Navigator.maybePop(context),
+                    onPressed: (_isSubmitting || controller.isLoading)
+                        ? null
+                        : () => Navigator.maybePop(context),
                     icon: const Icon(Icons.arrow_back_rounded),
                     label: const Text('Kembali'),
-                    style: TextButton.styleFrom(foregroundColor: AppTheme.textSecondary),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.textSecondary,
+                    ),
                   ),
                 ),
               ],

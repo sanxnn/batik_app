@@ -1,4 +1,3 @@
-
 import 'package:dio/dio.dart';
 
 import '../core/network/api_client.dart';
@@ -67,10 +66,7 @@ class AddressService {
     Map<String, dynamic> data,
   ) async {
     try {
-      final response = await _dio.post(
-        '/addresses',
-        data: data,
-      );
+      final response = await _dio.post('/addresses', data: data);
 
       final address = AddressModel.fromJson(response.data['data']);
 
@@ -88,10 +84,7 @@ class AddressService {
     Map<String, dynamic> data,
   ) async {
     try {
-      final response = await _dio.put(
-        '/addresses/$id',
-        data: data,
-      );
+      final response = await _dio.put('/addresses/$id', data: data);
 
       final address = AddressModel.fromJson(response.data['data']);
 
@@ -119,9 +112,7 @@ class AddressService {
   // PATCH: Jadikan alamat utama
   Future<ApiResult<AddressModel>> setPrimary(int id) async {
     try {
-      final response = await _dio.patch(
-        '/addresses/$id/primary',
-      );
+      final response = await _dio.patch('/addresses/$id/primary');
 
       final address = AddressModel.fromJson(response.data['data']);
 

@@ -7,6 +7,7 @@ import '../controllers/address_controller.dart';
 import '../controllers/cart_controller.dart';
 import '../controllers/order_controller.dart';
 import 'edit_profile_view.dart';
+import 'custom_order_view.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -166,7 +167,9 @@ class _ProfileViewState extends State<ProfileView> {
                             ),
                             child: CircleAvatar(
                               radius: 50,
-                              backgroundColor: primaryColor.withValues(alpha: 0.15),
+                              backgroundColor: primaryColor.withValues(
+                                alpha: 0.15,
+                              ),
                               child: Text(
                                 initial,
                                 style: TextStyle(
@@ -186,7 +189,8 @@ class _ProfileViewState extends State<ProfileView> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const EditProfileView(),
+                                    builder: (context) =>
+                                        const EditProfileView(),
                                   ),
                                 );
                               },
@@ -224,7 +228,10 @@ class _ProfileViewState extends State<ProfileView> {
                 ),
                 const SizedBox(height: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(20),
@@ -281,6 +288,17 @@ class _ProfileViewState extends State<ProfileView> {
                           ),
                         );
                       },
+                    ),
+                    _MenuItem(
+                      icon: Icons.design_services_outlined,
+                      title: 'Custom Order',
+                      subtitle: 'Pesan batik sesuai desainmu',
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CustomOrderView(),
+                        ),
+                      ),
                     ),
                     _MenuItem(
                       icon: Icons.help_outline,

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../../models/cart_model.dart';
@@ -19,10 +18,7 @@ class CartItemCard extends StatelessWidget {
   });
 
   String _formatPrice(double price) {
-    return 'Rp ${price.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (m) => '${m[1]}.',
-    )}';
+    return 'Rp ${price.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
   }
 
   @override
@@ -102,9 +98,7 @@ class CartItemCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    item.isPreOrder
-                        ? 'Pre-Order'
-                        : 'Stok: ${variant.stock}',
+                    item.isPreOrder ? 'Pre-Order' : 'Stok: ${variant.stock}',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,

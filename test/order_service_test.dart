@@ -88,10 +88,15 @@ void main() {
 
   test('payment token accepts both success response shapes', () async {
     final created = OrderService(
-      dio: fakeDio((options) => {
-        'data': {'order_number': 'BRK-25', 'amount': 470000,
-          'snap_token': 'created-token'},
-      }),
+      dio: fakeDio(
+        (options) => {
+          'data': {
+            'order_number': 'BRK-25',
+            'amount': 470000,
+            'snap_token': 'created-token',
+          },
+        },
+      ),
     );
     final service = OrderService(
       dio: fakeDio(
@@ -102,6 +107,13 @@ void main() {
     );
     expect(await created.getSnapToken(25), 'created-token');
     expect(await service.getSnapToken(25), 'token-123');
+  });
+
+  test('payment token accepts a top-level token fallback', () async {
+    final service = OrderService(
+      dio: fakeDio((options) => {'snap_token': 'top-level-token'}),
+    );
+    expect(await service.getSnapToken(25), 'top-level-token');
   });
 
   test('Snap URL uses the configured environment and token', () {

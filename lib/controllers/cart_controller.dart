@@ -1,4 +1,3 @@
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
@@ -61,10 +60,7 @@ class CartController extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      _cart = await _service.addToCart(
-        variant: variant,
-        quantity: quantity,
-      );
+      _cart = await _service.addToCart(variant: variant, quantity: quantity);
 
       notifyListeners();
       return true;
@@ -87,10 +83,7 @@ class CartController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _cart = await _service.updateQuantity(
-        itemId: itemId,
-        quantity: quantity,
-      );
+      _cart = await _service.updateQuantity(itemId: itemId, quantity: quantity);
 
       return true;
     } catch (e) {
