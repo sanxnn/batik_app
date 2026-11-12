@@ -1,4 +1,3 @@
-
 import 'package:dio/dio.dart';
 
 import '../core/network/api_client.dart';
@@ -21,10 +20,7 @@ class CartService {
   }) async {
     final response = await _dio.post(
       '/cart/items',
-      data: {
-        'product_variant_id': variant.id,
-        'quantity': quantity,
-      },
+      data: {'product_variant_id': variant.id, 'quantity': quantity},
     );
 
     return _parseCart(response.data);
@@ -37,9 +33,7 @@ class CartService {
   }) async {
     final response = await _dio.put(
       '/cart/items/$itemId',
-      data: {
-        'quantity': quantity,
-      },
+      data: {'quantity': quantity},
     );
 
     return _parseCart(response.data);
@@ -64,8 +58,6 @@ class CartService {
       throw Exception('Format respons keranjang tidak valid.');
     }
 
-    return CartModel.fromJson(
-      Map<String, dynamic>.from(data),
-    );
+    return CartModel.fromJson(Map<String, dynamic>.from(data));
   }
 }

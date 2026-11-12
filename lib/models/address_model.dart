@@ -1,4 +1,3 @@
-
 class AddressModel {
   final int id;
   final String label;
@@ -35,8 +34,7 @@ class AddressModel {
       district: json['district'],
       postalCode: json['postal_code'] ?? '',
       detail: json['detail'] ?? '',
-      isPrimary: json['is_primary'] == true ||
-          json['is_primary'] == 1,
+      isPrimary: json['is_primary'] == true || json['is_primary'] == 1,
     );
   }
 }

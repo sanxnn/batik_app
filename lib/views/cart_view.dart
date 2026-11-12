@@ -287,8 +287,10 @@ class _CartViewState extends State<CartView> {
           return CartSummary(
             totalItems: controller.totalItems,
             totalPrice: controller.totalPrice,
-            onCheckout: () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const CheckoutView())),
+            onCheckout: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CheckoutView()),
+            ),
           );
         },
       ),

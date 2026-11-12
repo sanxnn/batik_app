@@ -9,7 +9,8 @@ class ApiClient {
   bool _isInitialized = false;
 
   ApiClient._internal() {
-    final baseUrl = dotenv.env['API_BASE_URL'] ??
+    final baseUrl =
+        dotenv.env['API_BASE_URL'] ??
         'https://batikrubungkuning.sanxnn.my.id/api';
 
     _dio = Dio(

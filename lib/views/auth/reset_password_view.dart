@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../controllers/auth_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth/auth_layout.dart';
@@ -25,7 +26,8 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     if (args != null) {
       _email = args['email'] as String?;
       _resetToken = args['resetToken'] as String?;
@@ -87,7 +89,8 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
       builder: (context, controller, _) {
         return AuthLayout(
           title: 'Buat Password Baru 🔑',
-          subtitle: 'Pastikan password baru Anda mudah diingat namun tetap aman.',
+          subtitle:
+              'Pastikan password baru Anda mudah diingat namun tetap aman.',
           child: Form(
             key: _formKey,
             child: Column(
@@ -98,7 +101,8 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                   label: 'Password Baru',
                   hint: 'Minimal 8 karakter',
                   icon: Icons.lock_outline,
-                  obscureText: true, // Pastikan widget Anda mendukung properti ini
+                  obscureText:
+                      true, // Pastikan widget Anda mendukung properti ini
                   enabled: !_isSubmitting && !controller.isLoading,
                   textInputAction: TextInputAction.next,
                   validator: (value) {
@@ -135,10 +139,14 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                 const SizedBox(height: 12),
                 Center(
                   child: TextButton.icon(
-                    onPressed: (_isSubmitting || controller.isLoading) ? null : () => Navigator.maybePop(context),
+                    onPressed: (_isSubmitting || controller.isLoading)
+                        ? null
+                        : () => Navigator.maybePop(context),
                     icon: const Icon(Icons.arrow_back_rounded),
                     label: const Text('Batal'),
-                    style: TextButton.styleFrom(foregroundColor: AppTheme.textSecondary),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.textSecondary,
+                    ),
                   ),
                 ),
               ],

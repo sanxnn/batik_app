@@ -5,6 +5,9 @@ import 'package:provider/provider.dart';
 
 import 'cart_view.dart';
 import '../controllers/product_controller.dart';
+import '../controllers/bundle_controller.dart';
+import '../models/bundle_model.dart';
+import '../models/order_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/home/home_search_bar.dart';
 import '../widgets/product/product_card.dart';
@@ -46,6 +49,7 @@ class _HomeViewState extends State<HomeView> {
       if (!mounted) return;
 
       context.read<ProductController>().fetchInitialData();
+      context.read<BundleController>().load(refresh: true);
     });
 
     // SLIDESHOW OTOMATIS SETIAP 4 DETIK
@@ -315,7 +319,12 @@ class _HomeViewState extends State<HomeView> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: Color.from(alpha: 1, red: 0.898, green: 0.678, blue: 0.071),
+                                  color: Color.from(
+                                    alpha: 1,
+                                    red: 0.898,
+                                    green: 0.678,
+                                    blue: 0.071,
+                                  ),
                                 ),
                               ),
                             ),
@@ -340,8 +349,9 @@ class _HomeViewState extends State<HomeView> {
                                 ? null
                                 : prodCtrl.categories[index - 1];
 
-                            final String categoryName =
-                                isAll ? 'Semua' : category!.name;
+                            final String categoryName = isAll
+                                ? 'Semua'
+                                : category!.name;
 
                             final bool isSelected = isAll
                                 ? prodCtrl.selectedCategoryId == null
@@ -352,12 +362,18 @@ class _HomeViewState extends State<HomeView> {
 
                             if (isAll) {
                               categoryIcon = Icons.grid_view_rounded;
-                            } else if (categoryName.toLowerCase().contains('bahan') ||
+                            } else if (categoryName.toLowerCase().contains(
+                                  'bahan',
+                                ) ||
                                 categoryName.toLowerCase().contains('kain')) {
                               categoryIcon = Icons.layers_outlined;
-                            } else if (categoryName.toLowerCase().contains('batik')) {
+                            } else if (categoryName.toLowerCase().contains(
+                              'batik',
+                            )) {
                               categoryIcon = Icons.checkroom_outlined;
-                            } else if (categoryName.toLowerCase().contains('bundling')) {
+                            } else if (categoryName.toLowerCase().contains(
+                              'bundling',
+                            )) {
                               categoryIcon = Icons.inventory_2_outlined;
                             } else {
                               categoryIcon = Icons.category_outlined;
@@ -376,7 +392,9 @@ class _HomeViewState extends State<HomeView> {
                                 child: Column(
                                   children: [
                                     AnimatedContainer(
-                                      duration: const Duration(milliseconds: 200),
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
                                       width: 55,
                                       height: 55,
                                       decoration: BoxDecoration(
@@ -444,8 +462,8 @@ class _HomeViewState extends State<HomeView> {
                               prodCtrl.searchQuery.isNotEmpty
                                   ? 'Hasil Pencarian'
                                   : prodCtrl.selectedCategoryId != null
-                                      ? 'Produk Kategori'
-                                      : 'Rekomendasi Untukmu',
+                                  ? 'Produk Kategori'
+                                  : 'Rekomendasi Untukmu',
                               style: const TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w700,
@@ -474,10 +492,7 @@ class _HomeViewState extends State<HomeView> {
 
                       Text(
                         '${prodCtrl.products.length} produk ditemukan',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: _textGrey,
-                        ),
+                        style: const TextStyle(fontSize: 12, color: _textGrey),
                       ),
 
                       const SizedBox(height: 15),
@@ -576,15 +591,19 @@ class _HomeViewState extends State<HomeView> {
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
-                    child: prodCtrl.errorMessage != null
-                        ? TextButton(onPressed: prodCtrl.loadMore,
-                            child: Text('${prodCtrl.errorMessage} — Coba lagi'))
-                        : prodCtrl.canLoadMore
-                            ? OutlinedButton(onPressed: prodCtrl.loadMore,
-                                child: const Text('Muat produk lainnya'))
-                            : const SizedBox.shrink(),
+                    child: _buildLoadMoreButton(prodCtrl),
                   ),
                 ),
+              SliverToBoxAdapter(
+                child: Consumer<BundleController>(
+                  builder: (context, bundleCtrl, _) {
+                    if (bundleCtrl.bundles.isEmpty && !bundleCtrl.isLoading) {
+                      return const SizedBox.shrink();
+                    }
+                    return _buildBundleSection(bundleCtrl);
+                  },
+                ),
+              ),
             ],
           );
         },
@@ -683,5 +702,153 @@ class _HomeViewState extends State<HomeView> {
         ),
       ),
     );
+  }
+
+  Widget _buildBundleSection(BundleController controller) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Paket Bundling',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: _textDark,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Pilihan hemat untukmu',
+            style: TextStyle(fontSize: 12, color: _textGrey),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 190,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: controller.bundles.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final bundle = controller.bundles[index];
+                final BundleVariantModel? variant = bundle.variants.isEmpty
+                    ? null
+                    : bundle.variants.first;
+                return SizedBox(
+                  width: 170,
+                  child: Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: variant == null
+                          ? null
+                          : () => _showBundle(context, bundle, variant),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: bundle.imageUrl.isEmpty
+                                ? Container(
+                                    color: const Color(0xFFF4EAD5),
+                                    child: const Center(
+                                      child: Icon(Icons.inventory_2_outlined),
+                                    ),
+                                  )
+                                : Image.network(
+                                    bundle.imageUrl,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => Container(
+                                      color: const Color(0xFFF4EAD5),
+                                      child: const Icon(
+                                        Icons.inventory_2_outlined,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 8, 10, 2),
+                            child: Text(
+                              bundle.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                            child: Text(
+                              variant == null
+                                  ? 'Detail tersedia'
+                                  : formatRupiah(variant.price),
+                              style: const TextStyle(
+                                color: Color(0xFFE6A000),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBundle(
+    BuildContext context,
+    BundleModel bundle,
+    BundleVariantModel variant,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              bundle.name,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 8),
+            Text(bundle.description ?? 'Paket pilihan dengan beberapa produk.'),
+            const SizedBox(height: 8),
+            Text('Varian: ${variant.name} • ${formatRupiah(variant.price)}'),
+            const SizedBox(height: 8),
+            for (final component in variant.components)
+              Text(
+                '• ${component.productName} (${component.quantity}x ${component.name})',
+              ),
+            const SizedBox(height: 12),
+            Text('Stok paket: ${variant.stock}'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadMoreButton(ProductController controller) {
+    if (controller.errorMessage != null) {
+      return TextButton(
+        onPressed: controller.loadMore,
+        child: Text('${controller.errorMessage} — Coba lagi'),
+      );
+    }
+    if (controller.canLoadMore) {
+      return OutlinedButton(
+        onPressed: controller.loadMore,
+        child: const Text('Muat produk lainnya'),
+      );
+    }
+    return const SizedBox.shrink();
   }
 }

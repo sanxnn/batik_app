@@ -57,17 +57,26 @@ class OrderService {
         if (notes != null && notes.isNotEmpty) 'notes': notes,
       },
     );
-    final data = response.data['data'] as Map;
-    final payment = data['payment'] is Map ? data['payment'] as Map : const {};
+    final body = Map<String, dynamic>.from(response.data as Map);
+    final data = Map<String, dynamic>.from(body['data'] as Map);
+    final payment = data['payment'] is Map
+        ? Map<String, dynamic>.from(data['payment'] as Map)
+        : const <String, dynamic>{};
+    final orderJson = data['order'] is Map ? data['order'] as Map : data;
     return CheckoutResult(
-      OrderModel.fromJson(Map<String, dynamic>.from(data['order'] as Map)),
+      OrderModel.fromJson(Map<String, dynamic>.from(orderJson)),
       payment['snap_token']?.toString(),
     );
   }
 
   Future<String?> getSnapToken(int id) async {
     final response = await _dio.post('/payments/$id/snap-token');
-    return response.data['data']['snap_token']?.toString();
+    final body = Map<String, dynamic>.from(response.data as Map);
+    final data = body['data'] is Map
+        ? Map<String, dynamic>.from(body['data'] as Map)
+        : const <String, dynamic>{};
+    final token = data['snap_token'] ?? body['snap_token'];
+    return token?.toString();
   }
 
   Future<OrderModel> cancelOrder(int id) async {

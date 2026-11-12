@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 class CartSummary extends StatelessWidget {
@@ -14,10 +13,7 @@ class CartSummary extends StatelessWidget {
   });
 
   String _formatPrice(double price) {
-    return 'Rp ${price.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (m) => '${m[1]}.',
-    )}';
+    return 'Rp ${price.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
   }
 
   @override
@@ -26,9 +22,7 @@ class CartSummary extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(24),
-        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -46,10 +40,7 @@ class CartSummary extends StatelessWidget {
               children: [
                 const Text(
                   'Total Produk',
-                  style: TextStyle(
-                    color: Color(0xFF777777),
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Color(0xFF777777), fontSize: 14),
                 ),
                 Text(
                   '$totalItems item',
@@ -72,10 +63,7 @@ class CartSummary extends StatelessWidget {
               children: [
                 const Text(
                   'Total Belanja',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
                 Text(
                   _formatPrice(totalPrice),
@@ -104,10 +92,7 @@ class CartSummary extends StatelessWidget {
                 ),
                 child: const Text(
                   'Lanjut ke Checkout',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
               ),
             ),

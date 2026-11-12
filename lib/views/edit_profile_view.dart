@@ -99,8 +99,12 @@ class _EditProfileViewState extends State<EditProfileView> {
 
     if (success) {
       if (controller.user?.isEmailVerified == false) {
-        Navigator.pushNamedAndRemoveUntil(context, '/verify-email', (_) => false,
-          arguments: controller.user!.email);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/verify-email',
+          (_) => false,
+          arguments: controller.user!.email,
+        );
       } else {
         Navigator.pop(context);
       }

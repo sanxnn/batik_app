@@ -1,5 +1,6 @@
 // models/product_model.dart
 import 'package:batik_app/models/category_model.dart';
+
 import '../core/network/image_url.dart';
 
 class ProductModel {
