@@ -1,17 +1,17 @@
 # Batik Rubung Kuning — aplikasi pelanggan
 
-Aplikasi Flutter untuk katalog, akun pelanggan, alamat, keranjang, checkout, pembayaran Midtrans, dan riwayat pesanan. Kontrak integrasi mengikuti [referensi API backend](https://github.com/sanxnn/rubung-v3/blob/main/docs/api-reference.md). Panduan arsitektur aplikasi ada di [dokumentasi.md](dokumentasi.md).
+Aplikasi Flutter untuk akun pelanggan, katalog, bundling, alamat, keranjang, checkout, pembayaran Midtrans, pengiriman, refund, dan custom order. Kontrak integrasi mengikuti [referensi API backend](https://github.com/sanxnn/rubung-v3/blob/main/docs/api-reference.md). Mulai dari [dokumentasi aplikasi](dokumentasi.md) untuk arsitektur, fitur, alur sistem, dan panduan pengujian.
 
 ## Persyaratan
 
 - Flutter dengan Dart SDK yang memenuhi `pubspec.yaml` (`^3.13.1`).
 - Untuk build Android: JDK lengkap yang menyediakan `javac`, Android SDK, dan signing release milik tim.
-- Backend Laravel API yang sesuai dengan `roadmap.md`.
+- Backend Laravel dengan versi API yang sesuai dengan [peta integrasi Flutter](roadmap.md).
 - Untuk uji pembayaran: akun dan konfigurasi Midtrans sandbox di backend. Production memerlukan konfigurasi Midtrans production di backend.
 
 ## Menjalankan aplikasi
 
-1. Salin `.env.example` menjadi `.env`. Endpoint bawaan mengarah ke `https://batikrubungkuning.sanxnn.my.id/api`. Untuk pengembangan lokal saja, ubah `API_BASE_URL` ke host backend lokal yang sesuai perangkat.
+1. Periksa `.env` dan isi `API_BASE_URL` dengan host backend pengembangan yang dapat dijangkau perangkat. Salin `.env.example` jika `.env` belum tersedia.
 2. Jalankan `flutter pub get`.
 3. Jalankan `flutter run --dart-define=MIDTRANS_ENV=sandbox`.
 
@@ -32,14 +32,9 @@ flutter build ios --release --dart-define=MIDTRANS_ENV=production
 
 Konfigurasi signing Android/iOS, identitas aplikasi, ikon, dan pengujian transaksi nyata tetap perlu dilakukan oleh tim rilis. Uji alur registrasi, verifikasi email, checkout, pembatalan, serta pembayaran Midtrans sandbox pada perangkat sebelum mengganti ke production.
 
-## Alur pembayaran
+## Panduan lanjut
 
-Checkout mengirim `address_id`, kode voucher, dan catatan ke backend. Harga akhir, diskon, ongkir, dan status pembayaran berasal dari backend. Aplikasi membuka halaman Snap di browser perangkat dan membaca ulang detail pesanan ketika pelanggan kembali. Jika token belum tersedia, tombol pembayaran di detail pesanan meminta token melalui `POST /payments/{orderId}/snap-token`.
-
-## Alur pelanggan lainnya
-
-Pelanggan memilih wilayah hingga desa atau kelurahan dan mengisi kode pos. Di checkout, pratinjau voucher menampilkan potongan dan subtotal setelah voucher.
-
-Detail pesanan menampilkan kurir dan resi, konfirmasi penerimaan untuk pesanan berbayar yang sudah dikirim, dan aksi refund sesuai status pesanan dan pembayaran. Riwayat pesanan menyediakan akses ke riwayat refund. Custom order mendukung lampiran, peninjauan penawaran, dan pemilihan alamat sebelum pembayaran.
-
-Token autentikasi disimpan melalui secure storage perangkat. Token dari versi lama yang memakai `shared_preferences` dimigrasikan saat startup.
+- [Fitur dan panduan pelanggan](docs/fitur.md)
+- [Alur sistem dan perubahan status](docs/alur-sistem.md)
+- [Peta integrasi API](roadmap.md)
+- [Skenario pengujian dan persiapan rilis](docs/pengujian-dan-rilis.md)

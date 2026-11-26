@@ -1,42 +1,52 @@
-# Dokumentasi aplikasi pelanggan
+# Dokumentasi aplikasi pelanggan Batik Rubung Kuning
 
-## Struktur
+Aplikasi Flutter melayani akun pelanggan, katalog, transaksi, pengiriman, refund, dan pesanan custom. Tim toko mengelola katalog, memproses pesanan, meninjau refund, dan memberi penawaran custom melalui panel admin Laravel.
 
-- `lib/core/network`: konfigurasi Dio, URL gambar, dan pembuka pembayaran Snap.
-- `lib/core/utils`: pemetaan error API.
-- `lib/models`: parsing data akun, katalog, alamat, keranjang, dan pesanan.
-- `lib/services`: request HTTP dan parsing respons; tidak memiliki state UI.
-- `lib/controllers`: state layar dan operasi asinkron menggunakan `ChangeNotifier`.
-- `lib/views`: layar pelanggan; widget terpakai ulang ada di `lib/widgets`.
+| Dokumen | Isi |
+| --- | --- |
+| [Panduan fitur](docs/fitur.md) | Layar, tindakan pelanggan, dan kondisi agar tindakan tersedia. |
+| [Alur sistem](docs/alur-sistem.md) | Urutan request, perubahan status, dan pemulihan saat transaksi terganggu. |
+| [Peta integrasi API](roadmap.md) | Service Flutter, endpoint yang dipakai, dan cara membaca respons. |
+| [Pengembangan, pengujian, dan rilis](docs/pengujian-dan-rilis.md) | Menjalankan aplikasi, menguji alur lokal dan sandbox, serta menyiapkan build. |
 
-Nama berkas alamat sudah diseragamkan menjadi `address_*`. Kontrak endpoint dan contoh payload ada di [roadmap.md](roadmap.md).
+## Arsitektur
 
-## Alur utama
+```mermaid
+flowchart LR
+    UI["Layar dan widget Flutter"] --> State["Provider / ChangeNotifier"]
+    State --> Service["Service dan model"]
+    UI --> Service
+    Service --> Dio["ApiClient / Dio"]
+    Dio --> Laravel["Laravel API"]
+    Dio --> Token["TokenStore / secure storage"]
+    Admin["Panel admin"] --> Laravel
+    Laravel --> DB["Database toko"]
+    Laravel --> Region["wilayah.id"]
+    Laravel --> Shipping["RajaOngkir"]
+    Laravel --> Mail["Email OTP"]
+    Laravel --> Snap["Midtrans"]
+    UI --> Browser["Browser perangkat"]
+    Browser --> Snap
+    Snap -->|Webhook| Laravel
+```
 
-1. Saat startup token lama dipindahkan sekali dari `shared_preferences` ke secure storage perangkat. Splash memeriksa token melalui `/auth/me`. Akun yang belum memverifikasi email menerima alamat email pada layar OTP.
-2. Beranda memuat kategori dan produk. Pencarian/kategori memulai halaman pertama; tombol muat lagi membaca halaman berikutnya. Respons request lama diabaikan ketika filter berubah. Detail produk memuat ulang `GET /products/{id}` saat dibuka.
-3. Detail produk menambah `product_variant_id` dan `quantity` ke keranjang. Keranjang membaca data terbaru dari server.
-4. Checkout memilih alamat, menampilkan subtotal keranjang, lalu mengirim `POST /orders`. Aplikasi tidak mengirim harga atau ongkir. Respons order disimpan agar detail tetap dapat dibuka jika token pembayaran belum tersedia.
-5. Detail order membuka halaman Snap menggunakan token pembayaran. Ketika aplikasi aktif lagi, detail order meminta status terbaru dari backend. Tombol perbarui tersedia; callback browser bukan sumber status final.
-6. Riwayat mengambil `GET /orders` secara berhalaman. Pembatalan hanya ditawarkan saat `pending_payment`.
+| Lapisan | Tanggung jawab |
+| --- | --- |
+| [Startup dan navigasi](lib/main.dart) | Memuat `.env`, menginisialisasi klien API, menyediakan controller, dan membuka Splash. |
+| [Layar](lib/views), [widget](lib/widgets), [tema](lib/theme) | Navigasi, input, validasi awal, dan tampilan status. Tab utama berisi Beranda, Keranjang, Pesanan, dan Profil. |
+| [Controller](lib/controllers) | Controller akun, katalog, bundling, alamat, keranjang, pesanan, dan custom order memakai `ChangeNotifier`. Layar refund menyimpan state operasi di layar dan memanggil service langsung. |
+| [Service](lib/services) dan [model](lib/models) | Service mengirim request lewat Dio serta membentuk model dari JSON. Model pesanan menurunkan ketersediaan aksi dari status pesanan, pembayaran, dan refund. |
+| [Jaringan](lib/core/network) | Base URL, header, token, path gambar publik, serta pembuka Snap. |
+| [Utilitas](lib/core/utils) | Pemetaan pesan API, hasil operasi, serta pemeriksaan awal format dan ukuran lampiran. |
 
-## Konfigurasi
+Alur data umumnya berjalan dari input layar ke controller dan service. Respons API diparsing ke model, lalu state diperbarui untuk merender layar. Harga, stok, ongkir, kuota voucher, hak akses, dan status transaksi divalidasi di Laravel. Detail transaksi mengambil ulang data setelah aksi pelanggan atau setelah kembali dari browser pembayaran.
 
-`API_BASE_URL` berasal dari `.env`, misalnya `https://batikrubungkuning.sanxnn.my.id/api`. URL gambar dibentuk dari base URL yang sama dan path `storage-image/{image}`. `MIDTRANS_ENV` diset saat build memakai `--dart-define`, bernilai `sandbox` (default) atau `production`. Jangan mencampur token sandbox dan URL production.
+## Sesi, penyimpanan, dan jaringan
 
-Halaman Snap dibuka di browser perangkat agar pengalihan ke aplikasi bank/e-wallet dapat dilakukan oleh sistem. Format URL mengikuti Snap Redirect Midtrans. Pastikan konfigurasi URL redirection Finish, Unfinish, dan Error di dashboard Midtrans sesuai kebutuhan deployment.
+- `TokenStore` menyimpan token Bearer di secure storage perangkat dan memegang salinan di memori untuk request. Saat startup, token lama dari `shared_preferences` dimigrasikan jika diperlukan. Preferensi biasa menyimpan email yang menunggu verifikasi.
+- Splash menanyakan `GET /auth/me` jika token tersedia. Hasilnya menentukan apakah pengguna masuk ke Beranda, Login, atau Verifikasi Email. Interceptor menghapus token ketika menerima `401`. Saat sesi habis di tengah penggunaan, layar dapat menampilkan kegagalan request dan pelanggan perlu login kembali.
+- Dio menggunakan `Accept: application/json` serta batas koneksi dan waktu tunggu respons 15 detik. Unggahan memakai `multipart/form-data` dengan boundary yang disiapkan Dio.
+- Jalur gambar produk dan lampiran custom menggunakan `/api/storage-image/{path}`. Bukti refund diambil sebagai byte melalui service berautentikasi dan ditampilkan dari memori.
+- `.env` merupakan aset aplikasi. Simpan URL publik di sana. Kunci Midtrans, kunci RajaOngkir, dan konfigurasi email berada di backend.
 
-## Pengujian
-
-- `flutter analyze`
-- `flutter test`
-- Uji manual dengan backend dan Midtrans sandbox: OTP, login, katalog dengan lebih dari satu halaman, tambah/ubah/hapus keranjang, alamat utama, voucher valid/tidak valid, checkout saat stok berubah, token pembayaran kosong, pembayaran sukses/gagal, pembatalan pending, dan kembali dari browser pembayaran.
-
-Tes otomatis saat ini mencakup parsing keranjang, pagination katalog dan pesanan, payload checkout, bentuk token pembayaran, serta URL Snap. Respons backend nyata perlu diuji di lingkungan staging karena `roadmap.md` adalah dokumentasi kontrak, bukan server yang dijalankan oleh tes.
-
-## Batasan dan pekerjaan berikutnya
-
-- Bundling dan custom order di backend belum ditampilkan dalam UI Flutter.
-- Integrasi secure storage perlu diuji pada perangkat Android/iOS fisik. Web dan desktop mempunyai persyaratan penyimpanan kunci tersendiri; rilis utama ditujukan untuk mobile.
-- Harga dan stok dapat berubah sesudah detail produk dibuka. Backend tetap memutuskan validitas stok dan total akhir saat checkout.
-- Navigasi dan tampilan status pembayaran perlu diuji pada Android/iOS fisik bersama metode pembayaran yang digunakan toko.
+[Sumber kontrak dan arsitektur Laravel](https://github.com/sanxnn/rubung-v3/tree/main/docs)
