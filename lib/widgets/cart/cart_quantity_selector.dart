@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 
 class CartQuantitySelector extends StatelessWidget {
-  final int quantity;
-  final int stock;
-  final bool canRequestMoreWithoutStock;
-  final bool isUpdating;
-  final ValueChanged<int> onChanged;
-
   const CartQuantitySelector({
     super.key,
     required this.quantity,
@@ -16,55 +10,44 @@ class CartQuantitySelector extends StatelessWidget {
     required this.onChanged,
   });
 
+  final int quantity;
+  final int stock;
+  final bool canRequestMoreWithoutStock;
+  final bool isUpdating;
+  final ValueChanged<int> onChanged;
+
   @override
   Widget build(BuildContext context) {
-    final canIncrease = canRequestMoreWithoutStock || quantity < stock;
-
-    return Container(
+    final theme = Theme.of(context);
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _button(
-            icon: Icons.remove,
-            enabled: quantity > 1 && !isUpdating,
-            onTap: () => onChanged(quantity - 1),
+          IconButton(
+            tooltip: 'Kurangi jumlah',
+            onPressed: quantity > 1 && !isUpdating
+                ? () => onChanged(quantity - 1)
+                : null,
+            icon: const Icon(Icons.remove_rounded),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              quantity.toString(),
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-            ),
+          Semantics(
+            label: 'Jumlah $quantity',
+            excludeSemantics: true,
+            child: Text('$quantity', style: theme.textTheme.labelLarge),
           ),
-          _button(
-            icon: Icons.add,
-            enabled: canIncrease && !isUpdating,
-            onTap: () => onChanged(quantity + 1),
+          IconButton(
+            tooltip: 'Tambah jumlah',
+            onPressed:
+                !isUpdating && (canRequestMoreWithoutStock || quantity < stock)
+                ? () => onChanged(quantity + 1)
+                : null,
+            icon: const Icon(Icons.add_rounded),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _button({
-    required IconData icon,
-    required bool enabled,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Icon(
-          icon,
-          size: 18,
-          color: enabled ? const Color(0xFF292929) : Colors.grey,
-        ),
       ),
     );
   }

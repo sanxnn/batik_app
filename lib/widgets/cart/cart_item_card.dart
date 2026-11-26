@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../models/cart_model.dart';
+import '../../models/order_model.dart';
+import '../catalog/catalog_image.dart';
 import 'cart_quantity_selector.dart';
 
 class CartItemCard extends StatelessWidget {
-  final CartItemModel item;
-  final bool isUpdating;
-  final ValueChanged<int> onQuantityChanged;
-  final VoidCallback onDelete;
-
   const CartItemCard({
     super.key,
     required this.item,
@@ -17,155 +14,93 @@ class CartItemCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  String _formatPrice(double price) {
-    return 'Rp ${price.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
-  }
+  final CartItemModel item;
+  final bool isUpdating;
+  final ValueChanged<int> onQuantityChanged;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final variant = item.variant;
     final product = variant.product;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFF0F0F0)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Gambar produk
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              product.imageUrl,
-              width: 90,
-              height: 100,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                width: 90,
-                height: 100,
-                color: const Color(0xFFF4EAD5),
-                child: const Icon(
-                  Icons.image_not_supported_outlined,
-                  color: Color(0xFFB5A17B),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 14),
-
-          // Informasi produk
-          Expanded(
-            child: Column(
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Card.outlined(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  product.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF292929),
-                  ),
-                ),
-
-                const SizedBox(height: 5),
-
-                Text(
-                  'Varian: ${variant.name}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF8A8172),
-                  ),
-                ),
-
-                const SizedBox(height: 6),
-
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: variant.stock == 0
-                        ? const Color(0xFF292929)
-                        : const Color(0xFFFFF4E0),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    variant.isBundle && variant.stock == 0
-                        ? 'Stok habis'
-                        : 'Stok: ${variant.stock}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: variant.stock == 0
-                          ? Colors.white
-                          : const Color(0xFF8A8172),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox.square(
+                    dimension: 64,
+                    child: CatalogImage(
+                      url: product.imageUrl,
+                      label: product.name,
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 10),
-
-                Text(
-                  _formatPrice(variant.price),
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFFE6A000),
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                Row(
-                  children: [
-                    CartQuantitySelector(
-                      quantity: item.quantity,
-                      stock: variant.stock,
-                      canRequestMoreWithoutStock:
-                          item.canRequestMoreWithoutStock,
-                      isUpdating: isUpdating,
-                      onChanged: onQuantityChanged,
-                    ),
-
-                    const Spacer(),
-
-                    IconButton(
-                      onPressed: isUpdating ? null : onDelete,
-                      icon: const Icon(
-                        Icons.delete_outline_rounded,
-                        color: Colors.redAccent,
-                        size: 21,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(product.name, style: theme.textTheme.titleSmall),
+                      Text(
+                        variant.name,
+                        style: TextStyle(color: scheme.onSurfaceVariant),
                       ),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 4),
-
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    'Subtotal: ${_formatPrice(item.subtotal)}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF555555),
-                    ),
+                      Text(
+                        formatRupiah(variant.price),
+                        style: theme.textTheme.labelLarge,
+                      ),
+                      if (variant.isBundle && variant.stock == 0)
+                        Text(
+                          'Stok paket habis',
+                          style: TextStyle(color: scheme.error),
+                        )
+                      else if (variant.stock > 0)
+                        Text(
+                          'Stok ${variant.stock}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                    ],
                   ),
+                ),
+                IconButton(
+                  tooltip: 'Hapus ${product.name}',
+                  onPressed: isUpdating ? null : onDelete,
+                  icon: const Icon(Icons.delete_outline_rounded),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 10),
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 6,
+              children: [
+                CartQuantitySelector(
+                  quantity: item.quantity,
+                  stock: variant.stock,
+                  canRequestMoreWithoutStock: item.canRequestMoreWithoutStock,
+                  isUpdating: isUpdating,
+                  onChanged: onQuantityChanged,
+                ),
+                Text(
+                  'Subtotal ${formatRupiah(item.subtotal)}',
+                  style: theme.textTheme.labelLarge,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
