@@ -4,23 +4,24 @@ class AppTheme {
   AppTheme._();
 
   // Brand colors
-  static const Color primary = Color(0xFFFFC928);
-  static const Color primaryDark = Color(0xFFE5AD12);
-  static const Color primaryLight = Color(0xFFFFF7D9);
+  static const Color primary = Color(0xFFF4C430);
+  static const Color primaryDark = Color(0xFFEDB918);
+  static const Color accentInk = Color(0xFF725400);
+  static const Color primaryLight = Color(0xFFFFF7DB);
 
   // Surface colors
-  static const Color background = Color(0xFFFFFFFF);
-  static const Color surface = Color(0xFFFAFAFA);
-  static const Color border = Color(0xFFEEEEEE);
+  static const Color background = Color(0xFFFAFAF8);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color border = Color(0xFFE7E5E4);
 
   // Text colors
-  static const Color textPrimary = Color(0xFF242424);
-  static const Color textSecondary = Color(0xFF858585);
-  static const Color textHint = Color(0xFFAAAAAA);
+  static const Color textPrimary = Color(0xFF252525);
+  static const Color textSecondary = Color(0xFF57534E);
+  static const Color textHint = Color(0xFF6E675E);
 
   // Status colors
-  static const Color error = Color(0xFFD94040);
-  static const Color success = Color(0xFF218653);
+  static const Color error = Color(0xFF991B1B);
+  static const Color success = Color(0xFF166534);
 
   static const double radiusSmall = 12;
   static const double radiusMedium = 16;
@@ -30,12 +31,20 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      fontFamily: 'Instrument Sans',
       scaffoldBackgroundColor: background,
       colorScheme: const ColorScheme.light(
         primary: primary,
         onPrimary: textPrimary,
-        secondary: primaryDark,
-        surface: background,
+        secondary: accentInk,
+        onSecondary: Colors.white,
+        secondaryContainer: primaryLight,
+        onSecondaryContainer: accentInk,
+        surface: surface,
+        onSurface: textPrimary,
+        onSurfaceVariant: textSecondary,
+        outline: textHint,
+        outlineVariant: border,
         error: error,
         onError: Colors.white,
       ),
@@ -65,7 +74,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMedium),
-          borderSide: const BorderSide(color: primaryDark, width: 1.5),
+          borderSide: const BorderSide(color: accentInk, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMedium),
@@ -74,6 +83,37 @@ class AppTheme {
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMedium),
           borderSide: const BorderSide(color: error, width: 1.5),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: surface,
+        elevation: 0,
+        indicatorColor: primaryLight,
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? accentInk
+                : textSecondary,
+          ),
+        ),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 12,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+            color: states.contains(WidgetState.selected)
+                ? accentInk
+                : textSecondary,
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusMedium),
+          ),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -103,7 +143,8 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: textPrimary,
+          foregroundColor: accentInk,
+          minimumSize: const Size(48, 48),
           textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         ),
       ),

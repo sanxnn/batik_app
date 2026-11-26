@@ -24,56 +24,44 @@ class _MainViewState extends State<MainView> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF6D4C41);
-
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: Container(
+      bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant,
             ),
-          ],
+          ),
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          selectedItemColor: primaryColor,
-          unselectedItemColor: Colors.grey,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
-          ),
-          items: const [
-            BottomNavigationBarItem(
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (index) =>
+              setState(() => _currentIndex = index),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          animationDuration: reduceMotion
+              ? Duration.zero
+              : const Duration(milliseconds: 200),
+          destinations: const [
+            NavigationDestination(
               icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
+              selectedIcon: Icon(Icons.home_rounded),
               label: 'Beranda',
             ),
-            BottomNavigationBarItem(
+            NavigationDestination(
               icon: Icon(Icons.shopping_cart_outlined),
-              activeIcon: Icon(Icons.shopping_cart_rounded),
+              selectedIcon: Icon(Icons.shopping_cart_rounded),
               label: 'Keranjang',
             ),
-            BottomNavigationBarItem(
+            NavigationDestination(
               icon: Icon(Icons.receipt_long_outlined),
-              activeIcon: Icon(Icons.receipt_long_rounded),
+              selectedIcon: Icon(Icons.receipt_long_rounded),
               label: 'Pesanan',
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              activeIcon: Icon(Icons.person_rounded),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline_rounded),
+              selectedIcon: Icon(Icons.person_rounded),
               label: 'Profil',
             ),
           ],

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../controllers/order_controller.dart';
 import '../models/order_model.dart';
 import '../theme/app_theme.dart';
+import '../widgets/common/content_state.dart';
 import 'order_detail_view.dart';
 import 'refund_history_view.dart';
 
@@ -42,29 +43,25 @@ class _OrderViewState extends State<OrderView> {
       body: Consumer<OrderController>(
         builder: (context, controller, _) {
           if (controller.isLoading && controller.orders.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const ContentLoading(label: 'Memuat pesanan');
           }
           if (controller.errorMessage != null && controller.orders.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(controller.errorMessage!, textAlign: TextAlign.center),
-                  TextButton(
-                    onPressed: () => controller.load(refresh: true),
-                    child: const Text('Coba lagi'),
-                  ),
-                ],
-              ),
+            return ContentState(
+              icon: Icons.sync_problem_rounded,
+              message: controller.errorMessage!,
+              onRetry: () => controller.load(refresh: true),
             );
           }
           if (controller.orders.isEmpty) {
             return RefreshIndicator(
               onRefresh: () => controller.load(refresh: true),
               child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
-                  SizedBox(height: 180),
-                  Center(child: Text('Belum ada pesanan')),
+                  ContentState(
+                    icon: Icons.receipt_long_outlined,
+                    message: 'Belum ada pesanan',
+                  ),
                 ],
               ),
             );
