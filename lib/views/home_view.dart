@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'cart_view.dart';
+import 'bundle_detail_view.dart';
 import '../controllers/product_controller.dart';
 import '../controllers/bundle_controller.dart';
 import '../models/bundle_model.dart';
@@ -740,9 +741,12 @@ class _HomeViewState extends State<HomeView> {
                   child: Card(
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
-                      onTap: variant == null
-                          ? null
-                          : () => _showBundle(context, bundle, variant),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BundleDetailView(bundleId: bundle.id),
+                        ),
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -798,40 +802,6 @@ class _HomeViewState extends State<HomeView> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showBundle(
-    BuildContext context,
-    BundleModel bundle,
-    BundleVariantModel variant,
-  ) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              bundle.name,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            Text(bundle.description ?? 'Paket pilihan dengan beberapa produk.'),
-            const SizedBox(height: 8),
-            Text('Varian: ${variant.name} • ${formatRupiah(variant.price)}'),
-            const SizedBox(height: 8),
-            for (final component in variant.components)
-              Text(
-                '• ${component.productName} (${component.quantity}x ${component.name})',
-              ),
-            const SizedBox(height: 12),
-            Text('Stok paket: ${variant.stock}'),
-          ],
-        ),
       ),
     );
   }

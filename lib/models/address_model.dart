@@ -6,6 +6,8 @@ class AddressModel {
   final String province;
   final String city;
   final String? district;
+  final String? village;
+  final List<String?> regionCodes;
   final String postalCode;
   final String detail;
   final bool isPrimary;
@@ -18,6 +20,8 @@ class AddressModel {
     required this.province,
     required this.city,
     this.district,
+    this.village,
+    this.regionCodes = const [null, null, null, null],
     required this.postalCode,
     required this.detail,
     required this.isPrimary,
@@ -32,6 +36,13 @@ class AddressModel {
       province: json['province'] ?? '',
       city: json['city'] ?? '',
       district: json['district'],
+      village: json['village'],
+      regionCodes: [
+        'province_code',
+        'city_code',
+        'district_code',
+        'village_code',
+      ].map((key) => json[key]?.toString()).toList(growable: false),
       postalCode: json['postal_code'] ?? '',
       detail: json['detail'] ?? '',
       isPrimary: json['is_primary'] == true || json['is_primary'] == 1,

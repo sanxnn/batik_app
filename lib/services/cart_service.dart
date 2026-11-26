@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 
 import '../core/network/api_client.dart';
 import '../models/cart_model.dart';
-import '../models/product_model.dart';
 
 class CartService {
   final Dio _dio = ApiClient.instance.dio;
@@ -15,12 +14,12 @@ class CartService {
 
   // Menambahkan produk ke keranjang
   Future<CartModel> addToCart({
-    required VariantModel variant,
+    required int variantId,
     required int quantity,
   }) async {
     final response = await _dio.post(
       '/cart/items',
-      data: {'product_variant_id': variant.id, 'quantity': quantity},
+      data: {'product_variant_id': variantId, 'quantity': quantity},
     );
 
     return _parseCart(response.data);

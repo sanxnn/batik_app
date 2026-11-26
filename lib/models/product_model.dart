@@ -45,6 +45,12 @@ class ProductModel {
     );
   }
 
+  bool isPreOrder(VariantModel variant) =>
+      variant.stock == 0 && category?.slug == 'batik';
+
+  bool canPurchase(VariantModel variant) =>
+      variant.stock > 0 || isPreOrder(variant);
+
   VariantModel get cheapestVariant {
     if (variants.isEmpty) {
       return VariantModel(

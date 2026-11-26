@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/address_model.dart';
+import '../core/utils/api_error.dart';
+import '../services/address_service.dart';
 import '../theme/app_theme.dart';
 
 class AddressFormView extends StatefulWidget {
@@ -20,9 +22,31 @@ class _AddressFormViewState extends State<AddressFormView> {
   late final TextEditingController _labelCtrl;
   late final TextEditingController _recipientCtrl;
   late final TextEditingController _phoneCtrl;
-  late final TextEditingController _provinceCtrl;
-  late final TextEditingController _cityCtrl;
-  late final TextEditingController _districtCtrl;
+  final _addressService = AddressService();
+  static const _regionLabels = [
+    'Provinsi',
+    'Kabupaten / Kota',
+    'Kecamatan',
+    'Desa / Kelurahan',
+  ];
+  static const _regionPaths = [
+    'provinces',
+    'regencies',
+    'districts',
+    'villages',
+  ];
+  static const _regionKeys = [
+    'province_code',
+    'city_code',
+    'district_code',
+    'village_code',
+  ];
+  late final List<String?> _codes;
+  final _options = List.generate(4, (_) => <({String code, String name})>[]);
+  int? _loadingRegion;
+  int? _failedRegion;
+  String? _regionError;
+
   late final TextEditingController _postalCtrl;
   late final TextEditingController _detailCtrl;
 
@@ -39,9 +63,8 @@ class _AddressFormViewState extends State<AddressFormView> {
     _labelCtrl = TextEditingController(text: address?.label ?? '');
     _recipientCtrl = TextEditingController(text: address?.recipientName ?? '');
     _phoneCtrl = TextEditingController(text: address?.phone ?? '');
-    _provinceCtrl = TextEditingController(text: address?.province ?? '');
-    _cityCtrl = TextEditingController(text: address?.city ?? '');
-    _districtCtrl = TextEditingController(text: address?.district ?? '');
+    _codes = List.of(address?.regionCodes ?? const [null, null, null, null]);
+    _loadRegion(0, restore: true);
     _postalCtrl = TextEditingController(text: address?.postalCode ?? '');
     _detailCtrl = TextEditingController(text: address?.detail ?? '');
 
@@ -53,9 +76,6 @@ class _AddressFormViewState extends State<AddressFormView> {
     _labelCtrl.dispose();
     _recipientCtrl.dispose();
     _phoneCtrl.dispose();
-    _provinceCtrl.dispose();
-    _cityCtrl.dispose();
-    _districtCtrl.dispose();
     _postalCtrl.dispose();
     _detailCtrl.dispose();
 
@@ -70,18 +90,90 @@ class _AddressFormViewState extends State<AddressFormView> {
     return null;
   }
 
+  Future<void> _loadRegion(int level, {bool restore = false}) async {
+    final parent = level == 0 ? null : _codes[level - 1];
+    setState(() {
+      _loadingRegion = level;
+      _failedRegion = null;
+      _regionError = null;
+    });
+    try {
+      final path = parent == null
+          ? _regionPaths[level]
+          : '${_regionPaths[level]}/$parent';
+      final options = await _addressService.getRegions(path);
+      if (!mounted) return;
+      final valid = options.any((option) => option.code == _codes[level]);
+      setState(() {
+        _options[level] = options;
+        _loadingRegion = null;
+        if (!valid) _codes.fillRange(level, _codes.length, null);
+      });
+      if (restore && valid && level < _codes.length - 1) {
+        await _loadRegion(level + 1, restore: true);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadingRegion = null;
+        _failedRegion = level;
+        _regionError = apiErrorMessage(error);
+      });
+    }
+  }
+
+  Widget _regionDropdown(int level) => InputDecorator(
+    decoration: InputDecoration(labelText: _regionLabels[level]),
+    child: DropdownButtonHideUnderline(
+      child: DropdownButton<String>(
+        isExpanded: true,
+        value: _options[level].any((option) => option.code == _codes[level])
+            ? _codes[level]
+            : null,
+        hint: Text('Pilih ${_regionLabels[level]}'),
+        items: _options[level]
+            .map(
+              (option) => DropdownMenuItem(
+                value: option.code,
+                child: Text(option.name, overflow: TextOverflow.ellipsis),
+              ),
+            )
+            .toList(),
+        onChanged: _loadingRegion != null || _options[level].isEmpty
+            ? null
+            : (value) {
+                setState(() {
+                  _codes[level] = value;
+                  for (var next = level + 1; next < _codes.length; next++) {
+                    _codes[next] = null;
+                    _options[next] = [];
+                  }
+                  _regionError = null;
+                  _failedRegion = null;
+                });
+                if (value != null && level < _codes.length - 1) {
+                  _loadRegion(level + 1);
+                }
+              },
+      ),
+    ),
+  );
+
   Future<void> _saveAddress() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_loadingRegion != null) return;
+    if (_codes.any((code) => code == null) || _failedRegion != null) {
+      setState(
+        () => _regionError = 'Pilih wilayah hingga desa atau kelurahan.',
+      );
+      return;
+    }
     final data = <String, dynamic>{
       'label': _labelCtrl.text.trim(),
       'recipient_name': _recipientCtrl.text.trim(),
       'phone': _phoneCtrl.text.trim(),
-      'province': _provinceCtrl.text.trim(),
-      'city': _cityCtrl.text.trim(),
-      'district': _districtCtrl.text.trim().isEmpty
-          ? null
-          : _districtCtrl.text.trim(),
+      for (var i = 0; i < _regionKeys.length; i++) _regionKeys[i]: _codes[i],
       'postal_code': _postalCtrl.text.trim(),
       'detail': _detailCtrl.text.trim(),
       'is_primary': _isPrimary,
@@ -231,26 +323,30 @@ class _AddressFormViewState extends State<AddressFormView> {
 
             const SizedBox(height: 16),
 
-            _buildField(
-              label: 'Provinsi',
-              hint: 'Masukkan provinsi',
-              controller: _provinceCtrl,
-              maxLength: 100,
-            ),
-
-            _buildField(
-              label: 'Kota / Kabupaten',
-              hint: 'Masukkan kota atau kabupaten',
-              controller: _cityCtrl,
-              maxLength: 100,
-            ),
-
-            _buildField(
-              label: 'Kecamatan',
-              hint: 'Masukkan kecamatan',
-              controller: _districtCtrl,
-              maxLength: 100,
-            ),
+            if (widget.address case final address?)
+              if (address.regionCodes.every((code) => code == null))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Wilayah tersimpan: ${[address.district, address.city, address.province].whereType<String>().join(', ')}. Pilih kode wilayah sebelum menyimpan.',
+                  ),
+                ),
+            for (var level = 0; level < _regionLabels.length; level++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _regionDropdown(level),
+              ),
+            if (_loadingRegion != null) const LinearProgressIndicator(),
+            if (_regionError != null)
+              Text(
+                _regionError!,
+                style: const TextStyle(color: AppTheme.error),
+              ),
+            if (_failedRegion case final level?)
+              TextButton(
+                onPressed: () => _loadRegion(level, restore: true),
+                child: const Text('Coba lagi'),
+              ),
 
             _buildField(
               label: 'Kode Pos',

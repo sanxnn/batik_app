@@ -6,6 +6,7 @@ import '../core/network/payment_launcher.dart';
 import '../models/order_model.dart';
 import '../theme/app_theme.dart';
 import 'order_view.dart';
+import 'refund_view.dart';
 
 class OrderDetailView extends StatefulWidget {
   final int orderId;
@@ -107,7 +108,51 @@ class _OrderDetailViewState extends State<OrderDetailView>
           : controller.errorMessage ?? 'Gagal membatalkan.',
       error: !success,
     );
-    if (success) _refresh();
+    _refresh();
+  }
+
+  Future<void> _complete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi penerimaan'),
+        content: const Text('Konfirmasi setelah paket sudah Anda terima.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kembali'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Pesanan diterima'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    final controller = context.read<OrderController>();
+    final updated = await controller.complete(widget.orderId);
+    if (!mounted) return;
+    _message(
+      updated != null
+          ? 'Penerimaan pesanan dikonfirmasi.'
+          : controller.errorMessage ?? 'Gagal mengonfirmasi penerimaan.',
+      error: updated == null,
+    );
+    if (updated != null) setState(() => _order = updated);
+    await _refresh();
+  }
+
+  Future<void> _openRefund({int? refundId}) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => refundId == null
+            ? RefundView(orderId: widget.orderId)
+            : RefundView(refundId: refundId),
+      ),
+    );
+    if (mounted) await _refresh();
   }
 
   void _message(String message, {bool error = false}) {
@@ -122,6 +167,7 @@ class _OrderDetailViewState extends State<OrderDetailView>
   @override
   Widget build(BuildContext context) {
     final order = _order;
+    final busy = _loading || context.watch<OrderController>().isSaving;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detail Pesanan'),
@@ -153,7 +199,11 @@ class _OrderDetailViewState extends State<OrderDetailView>
                 const Divider(height: 32),
                 Text('Produk', style: Theme.of(context).textTheme.titleMedium),
                 if (order.items.isEmpty)
-                  const Text('Detail produk belum tersedia.'),
+                  Text(
+                    order.isCustomOrder
+                        ? 'Pesanan custom'
+                        : 'Detail produk belum tersedia.',
+                  ),
                 for (final item in order.items)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -165,6 +215,10 @@ class _OrderDetailViewState extends State<OrderDetailView>
                 if (order.recipient != null)
                   Text('Penerima: ${order.recipient}'),
                 if (order.shippingAddress != null) Text(order.shippingAddress!),
+                if (order.courier?.isNotEmpty == true)
+                  Text('Kurir: ${order.courier}'),
+                if (order.trackingNumber?.isNotEmpty == true)
+                  Text('Nomor resi: ${order.trackingNumber}'),
                 const SizedBox(height: 16),
                 _amount('Subtotal', order.subtotal),
                 _amount('Diskon', -order.discount),
@@ -172,25 +226,35 @@ class _OrderDetailViewState extends State<OrderDetailView>
                 const Divider(),
                 _amount('Total dibayar', order.total, strong: true),
                 const SizedBox(height: 24),
-                if (order.status == 'pending_payment') ...[
+                if (order.status == 'pending_payment' &&
+                    order.paymentStatus != 'success') ...[
                   FilledButton(
-                    onPressed:
-                        _loading || context.watch<OrderController>().isSaving
-                        ? null
-                        : _pay,
+                    onPressed: busy ? null : _pay,
                     child: const Text('Lanjutkan pembayaran'),
                   ),
                   TextButton(
-                    onPressed:
-                        _loading || context.watch<OrderController>().isSaving
-                        ? null
-                        : _cancel,
+                    onPressed: busy ? null : _cancel,
                     child: const Text('Batalkan pesanan'),
                   ),
                 ],
-                const Text(
-                  'Status pembayaran berasal dari server. Gunakan tombol perbarui setelah kembali dari Midtrans.',
-                ),
+                if (order.canComplete)
+                  FilledButton(
+                    onPressed: busy ? null : _complete,
+                    child: const Text('Konfirmasi pesanan diterima'),
+                  ),
+                if (order.refund case final refund?)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Status refund'),
+                    subtitle: Text(refund.statusLabel),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: busy ? null : () => _openRefund(refundId: refund.id),
+                  ),
+                if (order.canRequestRefund)
+                  OutlinedButton(
+                    onPressed: busy ? null : () => _openRefund(),
+                    child: const Text('Ajukan refund'),
+                  ),
               ],
             ),
     );

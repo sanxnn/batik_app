@@ -63,7 +63,8 @@ class CartItemModel {
 
   double get subtotal => variant.price * quantity;
 
-  bool get isPreOrder => variant.stock <= 0;
+  bool get canRequestMoreWithoutStock =>
+      variant.stock == 0 && !variant.isBundle;
 }
 
 // ==========================================
@@ -77,6 +78,7 @@ class CartVariantModel {
   final double price;
   final int stock;
   final CartProductModel product;
+  final bool isBundle;
 
   CartVariantModel({
     required this.id,
@@ -85,6 +87,7 @@ class CartVariantModel {
     required this.price,
     required this.stock,
     required this.product,
+    this.isBundle = false,
   });
 
   factory CartVariantModel.fromJson(Map<String, dynamic> json) {
@@ -102,6 +105,7 @@ class CartVariantModel {
       sku: json['sku']?.toString() ?? '',
       price: _toDouble(json['price']),
       stock: _toInt(json['stock']),
+      isBundle: json['is_bundle'] == true,
       product: CartProductModel.fromJson(
         Map<String, dynamic>.from(productJson),
       ),

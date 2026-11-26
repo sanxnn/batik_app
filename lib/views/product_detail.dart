@@ -55,7 +55,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
     });
   }
 
-  bool get isPreOrder => _selectedVariant.stock <= 0;
+  bool get isPreOrder => _product.isPreOrder(_selectedVariant);
 
   String _formatPrice(double price) {
     return 'Rp ${price.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
@@ -252,7 +252,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                               Text(
                                 isPreOrder
                                     ? 'Pre-Order'
-                                    : 'Stok: ${_selectedVariant.stock}',
+                                    : (_selectedVariant.stock <= 0
+                                          ? 'Stok habis'
+                                          : 'Stok: ${_selectedVariant.stock}'),
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -353,8 +355,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                       ),
                     ),
                     _buildQtyButton(Icons.add, () {
-                      if (_selectedVariant.stock <= 0 ||
-                          _quantity < _selectedVariant.stock) {
+                      if (isPreOrder || _quantity < _selectedVariant.stock) {
                         setState(() => _quantity++);
                       }
                     }),
@@ -366,7 +367,9 @@ class _ProductDetailViewState extends State<ProductDetailView> {
               // Tombol Tambah ke Keranjang
               Expanded(
                 child: ElevatedButton(
-                  onPressed: _product.variants.isEmpty
+                  onPressed:
+                      _product.variants.isEmpty ||
+                          !_product.canPurchase(_selectedVariant)
                       ? null
                       : () async {
                           final currentProduct = _product;
@@ -375,8 +378,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
                           final success = await context
                               .read<CartController>()
                               .addToCart(
-                                product: currentProduct,
-                                variant: selectedVar,
+                                variantId: selectedVar.id,
                                 quantity: _quantity,
                               );
 
@@ -477,7 +479,7 @@ class _ProductDetailViewState extends State<ProductDetailView> {
       runSpacing: 10,
       children: _product.variants.map((variant) {
         final isSelected = _selectedVariant.id == variant.id;
-        final isVariantPO = variant.stock <= 0;
+        final isVariantPO = _product.isPreOrder(variant);
 
         return GestureDetector(
           onTap: () {

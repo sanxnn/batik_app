@@ -16,6 +16,14 @@ class CheckoutResult {
   const CheckoutResult(this.order, this.snapToken);
 }
 
+class VoucherPreview {
+  final String code;
+  final int discount;
+  final int subtotalAfterVoucher;
+
+  const VoucherPreview(this.code, this.discount, this.subtotalAfterVoucher);
+}
+
 class OrderService {
   final Dio _dio;
   OrderService({Dio? dio}) : _dio = dio ?? ApiClient.instance.dio;
@@ -77,6 +85,26 @@ class OrderService {
         : const <String, dynamic>{};
     final token = data['snap_token'] ?? body['snap_token'];
     return token?.toString();
+  }
+
+  Future<VoucherPreview> validateVoucher(String code) async {
+    final response = await _dio.post(
+      '/vouchers/validate',
+      data: {'code': code},
+    );
+    final data = response.data['data'] as Map;
+    return VoucherPreview(
+      data['code'] as String,
+      (data['discount'] as num).toInt(),
+      (data['subtotal_after_voucher'] as num).toInt(),
+    );
+  }
+
+  Future<OrderModel> completeOrder(int id) async {
+    final response = await _dio.post('/orders/$id/complete');
+    return OrderModel.fromJson(
+      Map<String, dynamic>.from(response.data['data'] as Map),
+    );
   }
 
   Future<OrderModel> cancelOrder(int id) async {

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:file_selector/file_selector.dart';
 
 import '../core/network/api_client.dart';
 import '../models/custom_order_model.dart';
@@ -45,14 +46,51 @@ class CustomOrderService {
     );
   }
 
-  Future<CustomOrderModel> create(String description) async {
+  Future<CustomOrderModel> create(
+    String description, {
+    List<XFile> attachments = const [],
+  }) async {
     final response = await _dio.post(
       '/custom-orders',
-      data: {'description': description.trim()},
+      data: attachments.isEmpty
+          ? {'description': description.trim()}
+          : await _attachments(attachments, description: description.trim()),
     );
     return CustomOrderModel.fromJson(
       Map<String, dynamic>.from(response.data['data'] as Map),
     );
+  }
+
+  Future<CustomOrderModel> addAttachments(int id, List<XFile> files) async {
+    final response = await _dio.post(
+      '/custom-orders/$id/attachments',
+      data: await _attachments(files),
+    );
+    return CustomOrderModel.fromJson(
+      Map<String, dynamic>.from(response.data['data'] as Map),
+    );
+  }
+
+  Future<FormData> _attachments(
+    List<XFile> files, {
+    String? description,
+  }) async {
+    final data = FormData();
+    if (description != null) {
+      data.fields.add(MapEntry('description', description));
+    }
+    for (final file in files) {
+      data.files.add(
+        MapEntry(
+          'attachments[]',
+          MultipartFile.fromBytes(
+            await file.readAsBytes(),
+            filename: file.name,
+          ),
+        ),
+      );
+    }
+    return data;
   }
 
   Future<OrderApprovalResult> approve(

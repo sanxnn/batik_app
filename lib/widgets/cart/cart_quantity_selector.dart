@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class CartQuantitySelector extends StatelessWidget {
   final int quantity;
   final int stock;
+  final bool canRequestMoreWithoutStock;
   final bool isUpdating;
   final ValueChanged<int> onChanged;
 
@@ -10,13 +11,14 @@ class CartQuantitySelector extends StatelessWidget {
     super.key,
     required this.quantity,
     required this.stock,
+    required this.canRequestMoreWithoutStock,
     required this.isUpdating,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final canIncrease = stock <= 0 || quantity < stock;
+    final canIncrease = canRequestMoreWithoutStock || quantity < stock;
 
     return Container(
       decoration: BoxDecoration(
