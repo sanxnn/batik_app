@@ -6,6 +6,7 @@ import '../controllers/cart_controller.dart';
 import '../core/utils/api_error.dart';
 import '../models/bundle_model.dart';
 import '../models/order_model.dart';
+import '../widgets/common/content_state.dart';
 
 class BundleDetailView extends StatefulWidget {
   final int bundleId;
@@ -51,18 +52,13 @@ class _BundleDetailViewState extends State<BundleDetailView> {
       future: _detail,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return const ContentLoading(label: 'Memuat detail paket');
         }
         if (snapshot.hasError) {
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              Text(apiErrorMessage(snapshot.error!)),
-              TextButton(
-                onPressed: () => setState(() => _detail = _getDetail()),
-                child: const Text('Coba lagi'),
-              ),
-            ],
+          return ContentState(
+            icon: Icons.sync_problem_rounded,
+            message: apiErrorMessage(snapshot.error!),
+            onRetry: () => setState(() => _detail = _getDetail()),
           );
         }
         final bundle = snapshot.data!;
