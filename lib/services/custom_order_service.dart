@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/network/api_client.dart';
 import '../models/custom_order_model.dart';
@@ -45,10 +46,53 @@ class CustomOrderService {
     );
   }
 
-  Future<CustomOrderModel> create(String description) async {
+  Future<FormData> _attachmentForm(
+    List<XFile> attachments, {
+    String? description,
+  }) async {
+    final files = <MapEntry<String, MultipartFile>>[];
+    for (final attachment in attachments) {
+      files.add(
+        MapEntry(
+          'attachments[]',
+          MultipartFile.fromBytes(
+            await attachment.readAsBytes(),
+            filename: attachment.name,
+          ),
+        ),
+      );
+    }
+    return FormData.fromMap({
+      if (description != null) 'description': description.trim(),
+    })..files.addAll(files);
+  }
+
+  Future<CustomOrderModel> create(
+    String description, {
+    List<XFile> attachments = const [],
+  }) async {
     final response = await _dio.post(
       '/custom-orders',
-      data: {'description': description.trim()},
+      data: attachments.isEmpty
+          ? {'description': description.trim()}
+          : await _attachmentForm(attachments, description: description),
+      options: attachments.isEmpty
+          ? null
+          : Options(contentType: Headers.multipartFormDataContentType),
+    );
+    return CustomOrderModel.fromJson(
+      Map<String, dynamic>.from(response.data['data'] as Map),
+    );
+  }
+
+  Future<CustomOrderModel> addAttachments(
+    int id,
+    List<XFile> attachments,
+  ) async {
+    final response = await _dio.post(
+      '/custom-orders/$id/attachments',
+      data: await _attachmentForm(attachments),
+      options: Options(contentType: Headers.multipartFormDataContentType),
     );
     return CustomOrderModel.fromJson(
       Map<String, dynamic>.from(response.data['data'] as Map),

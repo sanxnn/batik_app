@@ -51,10 +51,14 @@ class ProductController extends ChangeNotifier {
     await _refresh();
   }
 
-  void resetFilters() {
+  void resetFilters({bool refresh = true}) {
     _selectedCategoryId = null;
     _searchQuery = '';
-    _refresh();
+    if (refresh) {
+      _refresh();
+    } else {
+      notifyListeners();
+    }
   }
 
   Future<void> _refresh() async {

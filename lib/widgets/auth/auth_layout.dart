@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_theme.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_radius.dart';
+import '../../theme/app_spacing.dart';
+import '../common/batik_accent.dart';
 
 class AuthLayout extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final Widget child;
-  final bool showBranding;
-
   const AuthLayout({
     super.key,
     required this.title,
@@ -16,58 +14,53 @@ class AuthLayout extends StatelessWidget {
     this.showBranding = true,
   });
 
+  final String title;
+  final String subtitle;
+  final Widget child;
+  final bool showBranding;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
       body: SafeArea(
         child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          builder: (context, constraints) => SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            child: Center(
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (showBranding) const _AuthBranding(),
-
-                    // Area Form dengan padding yang lebih lega dan proporsional
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(28, 32, 28, 32),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: const TextStyle(
-                              fontSize: 28,
-                              height: 1.2,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
-                              color: AppTheme.textPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            subtitle,
-                            style: const TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 14.5,
-                              height: 1.6,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          child,
-                        ],
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                  maxWidth: AppSpacing.contentMaxWidth,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.page,
+                    vertical: AppSpacing.xl,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (showBranding) ...[
+                        const _AuthBranding(),
+                        const SizedBox(height: AppSpacing.xxl),
+                      ],
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.displaySmall,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.xxl),
+                      child,
+                    ],
+                  ),
                 ),
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
@@ -79,148 +72,51 @@ class _AuthBranding extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Warna emas tua yang kaya untuk aksen teks (bisa disesuaikan dengan AppTheme.primaryDark)
-    const Color richGold = Color(0xFFB88700);
-
-    return Container(
-      height: 230, // Sedikit lebih tinggi agar elemen bisa "bernapas"
-      clipBehavior: Clip.hardEdge,
-      decoration: const BoxDecoration(
-        color: AppTheme.primaryLight,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(
-            40,
-          ), // Lengkungan lebih besar untuk kesan modern
-          bottomRight: Radius.circular(40),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.brandYellow, AppColors.brandYellowDark],
+          ),
         ),
-      ),
-      child: Stack(
-        children: [
-          // --- DEKORASI LATAR BELAKANG (Soft Organic Blobs) ---
-          // Blob 1: Kanan Atas (Sangat halus)
-          Positioned(
-            top: -60,
-            right: -40,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          // Blob 2: Kiri Bawah (Sedikit lebih tegas)
-          Positioned(
-            bottom: -50,
-            left: -30,
-            child: Container(
-              width: 160,
-              height: 160,
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.25),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          // Blob 3: Tengah (Aksen sangat tipis untuk kedalaman)
-          Positioned(
-            top: 40,
-            left: 60,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.4),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-
-          // --- KONTEN UTAMA ---
-          Padding(
-            padding: const EdgeInsets.fromLTRB(28, 28, 28, 32),
-            child: Column(
+        child: Stack(
+          children: [
+            const Positioned.fill(child: BatikAccent(opacity: 0.06)),
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Logo & Brand Name
-                Row(
-                  children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: AppTheme.background,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primary.withValues(alpha: 0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.diamond_outlined, // Ikon yang lebih merepresentasikan "Premium/Craft"
-                        size: 26,
-                        color: AppTheme.primaryDark,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'RUBUNG KUNING',
-                          style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'BATIK • CRAFT • CULTURE',
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                const Spacer(), // Mendorong teks tagline ke bagian bawah header
-                // Tagline dengan Tipografi Elegan
-                const Text(
-                  'Cerita indah,',
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                    height: 1.1,
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: const Icon(
+                    Icons.storefront_outlined,
+                    color: AppColors.ink,
                   ),
                 ),
-                const SizedBox(height: 4),
-                const Text(
-                  'dalam setiap motif.',
-                  style: TextStyle(
-                    color: richGold, // Aksen emas yang kaya
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                    height: 1.1,
-                  ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  'Batik Rubung Kuning',
+                  style: Theme.of(context).textTheme.titleLarge
+                      ?.copyWith(color: AppColors.onBrandYellow),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  'Karya batik dari Jember',
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: AppColors.onBrandYellow),
                 ),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

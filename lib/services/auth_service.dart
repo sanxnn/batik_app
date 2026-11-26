@@ -9,14 +9,30 @@ class AuthService {
   final Dio _dio = ApiClient.instance.dio;
 
   String _extractErrorMessage(DioException e) {
-    if (e.response?.data['message'] != null) {
-      return e.response!.data['message'];
+    final body = e.response?.data;
+    if (body is Map && body['message'] != null) {
+      return body['message'].toString();
     }
-    if (e.response?.data['errors'] != null) {
-      final errors = e.response!.data['errors'] as Map<String, dynamic>;
-      return errors.values.first.first;
+    if (body is Map && body['errors'] is Map) {
+      final errors = Map<String, dynamic>.from(body['errors'] as Map);
+      if (errors.isNotEmpty) {
+        final first = errors.values.first;
+        if (first is List && first.isNotEmpty) return first.first.toString();
+        return first.toString();
+      }
+    }
+    if (e.response?.statusCode == 401) {
+      return 'Sesi berakhir. Silakan masuk kembali.';
     }
     return 'Terjadi kesalahan jaringan. Silakan coba lagi.';
+  }
+
+  Map<String, dynamic>? _extractValidationErrors(DioException e) {
+    final body = e.response?.data;
+    if (body is Map && body['errors'] is Map) {
+      return Map<String, dynamic>.from(body['errors'] as Map);
+    }
+    return null;
   }
 
   Future<ApiResult<UserModel>> login(String email, String password) async {
@@ -36,7 +52,7 @@ class AuthService {
     } on DioException catch (e) {
       return ApiResult.error(
         _extractErrorMessage(e),
-        errors: e.response?.data['errors'],
+        errors: _extractValidationErrors(e),
       );
     }
   }
@@ -70,7 +86,7 @@ class AuthService {
     } on DioException catch (e) {
       return ApiResult.error(
         _extractErrorMessage(e),
-        errors: e.response?.data['errors'],
+        errors: _extractValidationErrors(e),
       );
     }
   }
@@ -133,7 +149,7 @@ class AuthService {
     } on DioException catch (e) {
       return ApiResult.error(
         _extractErrorMessage(e),
-        errors: e.response?.data['errors'],
+        errors: _extractValidationErrors(e),
       );
     }
   }
@@ -159,7 +175,7 @@ class AuthService {
     } on DioException catch (e) {
       return ApiResult.error(
         _extractErrorMessage(e),
-        errors: e.response?.data['errors'],
+        errors: _extractValidationErrors(e),
       );
     }
   }
@@ -198,7 +214,7 @@ class AuthService {
     } on DioException catch (e) {
       return ApiResult.error(
         _extractErrorMessage(e),
-        errors: e.response?.data['errors'],
+        errors: _extractValidationErrors(e),
       );
     }
   }

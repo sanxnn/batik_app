@@ -1,30 +1,56 @@
 import 'package:flutter/material.dart';
 
+import 'app_colors.dart';
+import 'app_radius.dart';
+import 'app_spacing.dart';
+import 'app_typography.dart';
+
 class AppTheme {
   AppTheme._();
 
   // Brand colors
-  static const Color primary = Color(0xFFFFC928);
-  static const Color primaryDark = Color(0xFFE5AD12);
-  static const Color primaryLight = Color(0xFFFFF7D9);
+  static const Color primary = AppColors.ink;
+  static const Color primaryDark = AppColors.ink;
+  static const Color primaryLight = AppColors.yellowSoft;
+  static const Color accent = AppColors.brandYellow;
+  static const Color onAccent = AppColors.onBrandYellow;
 
   // Surface colors
-  static const Color background = Color(0xFFFFFFFF);
-  static const Color surface = Color(0xFFFAFAFA);
-  static const Color border = Color(0xFFEEEEEE);
+  static const Color background = AppColors.background;
+  static const Color surface = AppColors.surface;
+  static const Color border = AppColors.border;
 
   // Text colors
-  static const Color textPrimary = Color(0xFF242424);
-  static const Color textSecondary = Color(0xFF858585);
-  static const Color textHint = Color(0xFFAAAAAA);
+  static const Color textPrimary = AppColors.ink;
+  static const Color textSecondary = AppColors.textSecondary;
+  static const Color textHint = AppColors.textTertiary;
+
+  // Shared semantic surfaces used by catalog and cart widgets.
+  static const Color imagePlaceholder = AppColors.surfaceMuted;
+  static const Color warningSurface = AppColors.yellowSoft;
+  static const Color warningText = AppColors.warning;
+  static const Color darkSurface = AppColors.ink;
+  static const Color danger = AppColors.danger;
 
   // Status colors
-  static const Color error = Color(0xFFD94040);
-  static const Color success = Color(0xFF218653);
+  static const Color error = AppColors.danger;
+  static const Color success = AppColors.success;
+  static const Color warning = AppColors.warning;
+  static const Color disabled = AppColors.disabled;
+  static const double spaceSmall = AppSpacing.xs;
+  static const double spaceMedium = AppSpacing.md;
+  static const double spaceLarge = AppSpacing.xl;
+  static const double pagePadding = AppSpacing.page;
+  static const double contentMaxWidth = AppSpacing.contentMaxWidth;
+  static const double iconSize = 22;
+  static const double iconSmall = 16;
+  static const double iconLarge = 32;
+  static const double iconHero = 48;
+  static const double controlHeight = AppSpacing.touchTarget;
 
-  static const double radiusSmall = 12;
-  static const double radiusMedium = 16;
-  static const double radiusLarge = 24;
+  static const double radiusSmall = AppRadius.sm;
+  static const double radiusMedium = AppRadius.md;
+  static const double radiusLarge = AppRadius.lg;
 
   static ThemeData get lightTheme {
     return ThemeData(
@@ -33,9 +59,11 @@ class AppTheme {
       scaffoldBackgroundColor: background,
       colorScheme: const ColorScheme.light(
         primary: primary,
-        onPrimary: textPrimary,
-        secondary: primaryDark,
-        surface: background,
+        onPrimary: Colors.white,
+        secondary: accent,
+        onSecondary: onAccent,
+        surface: surface,
+        onSurface: textPrimary,
         error: error,
         onError: Colors.white,
       ),
@@ -46,6 +74,52 @@ class AppTheme {
         centerTitle: false,
         surfaceTintColor: Colors.transparent,
       ),
+      iconTheme: const IconThemeData(color: textPrimary, size: iconSize),
+      cardTheme: CardThemeData(
+        color: surface,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusMedium),
+          side: const BorderSide(color: border),
+        ),
+      ),
+      dividerTheme: const DividerThemeData(color: border, thickness: 1),
+      chipTheme: ChipThemeData(
+        backgroundColor: surface,
+        selectedColor: primaryLight,
+        side: const BorderSide(color: border),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusSmall),
+        ),
+        labelStyle: const TextStyle(
+          color: textPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radiusLarge),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: surface,
+        showDragHandle: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(radiusLarge),
+          ),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: surface,
+        indicatorColor: primaryLight,
+        labelTextStyle: WidgetStateProperty.all(
+          const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+        ),
+      ),
+      textTheme: AppTypography.textTheme,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surface,
@@ -79,14 +153,26 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primary,
-          foregroundColor: textPrimary,
-          disabledBackgroundColor: const Color(0xFFFFE9A3),
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: disabled,
           elevation: 0,
           minimumSize: const Size(double.infinity, 54),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMedium),
           ),
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: disabled,
+          minimumSize: const Size(0, controlHeight),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radiusMedium),
+          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -114,6 +200,12 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusMedium),
         ),
+      ),
+      tabBarTheme: const TabBarThemeData(
+        labelColor: textPrimary,
+        unselectedLabelColor: textSecondary,
+        indicatorColor: accent,
+        dividerColor: border,
       ),
     );
   }

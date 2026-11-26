@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_radius.dart';
+import '../../theme/app_spacing.dart';
 import '../../widgets/auth/auth_layout.dart';
 import '../../widgets/auth/auth_text_field.dart';
 import '../../widgets/auth/auth_button.dart';
@@ -56,7 +59,7 @@ class _RegisterViewState extends State<RegisterView> {
             colorScheme: const ColorScheme.light(
               primary: AppTheme.primary,
               onPrimary: AppTheme.textPrimary,
-              surface: Colors.white,
+              surface: AppColors.surface,
               onSurface: AppTheme.textPrimary,
             ),
           ),
@@ -153,7 +156,7 @@ class _RegisterViewState extends State<RegisterView> {
                   },
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
 
                 // Email
                 AuthTextField(
@@ -176,7 +179,7 @@ class _RegisterViewState extends State<RegisterView> {
                   },
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
 
                 // Nomor telepon opsional
                 AuthTextField(
@@ -187,24 +190,20 @@ class _RegisterViewState extends State<RegisterView> {
                   keyboardType: TextInputType.phone,
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
 
                 // Jenis kelamin
-                const Text(
+                Text(
                   'Jenis kelamin',
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(context).textTheme.labelLarge,
                 ),
 
-                const SizedBox(height: 9),
+                const SizedBox(height: AppSpacing.xs),
 
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 5,
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xxs,
                   ),
                   decoration: BoxDecoration(
                     color: AppTheme.surface,
@@ -215,7 +214,7 @@ class _RegisterViewState extends State<RegisterView> {
                     child: DropdownButton<String>(
                       value: _gender,
                       isExpanded: true,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                       icon: const Icon(
                         Icons.keyboard_arrow_down_rounded,
                         color: AppTheme.textSecondary,
@@ -228,9 +227,9 @@ class _RegisterViewState extends State<RegisterView> {
                               Icon(
                                 Icons.male_rounded,
                                 color: AppTheme.textSecondary,
-                                size: 21,
+                                size: AppTheme.iconSize,
                               ),
-                              SizedBox(width: 12),
+                              SizedBox(width: AppSpacing.sm),
                               Text('Laki-laki'),
                             ],
                           ),
@@ -242,9 +241,9 @@ class _RegisterViewState extends State<RegisterView> {
                               Icon(
                                 Icons.female_rounded,
                                 color: AppTheme.textSecondary,
-                                size: 21,
+                                size: AppTheme.iconSize,
                               ),
-                              SizedBox(width: 12),
+                              SizedBox(width: AppSpacing.sm),
                               Text('Perempuan'),
                             ],
                           ),
@@ -259,19 +258,15 @@ class _RegisterViewState extends State<RegisterView> {
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
 
                 // Tanggal lahir
-                const Text(
+                Text(
                   'Tanggal lahir',
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(context).textTheme.labelLarge,
                 ),
 
-                const SizedBox(height: 9),
+                const SizedBox(height: AppSpacing.xs),
 
                 Material(
                   color: AppTheme.surface,
@@ -282,8 +277,8 @@ class _RegisterViewState extends State<RegisterView> {
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 18,
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.lg,
                       ),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(
@@ -296,20 +291,20 @@ class _RegisterViewState extends State<RegisterView> {
                           const Icon(
                             Icons.calendar_month_outlined,
                             color: AppTheme.textSecondary,
-                            size: 21,
+                            size: AppTheme.iconSize,
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
                               _birthDate == null
                                   ? 'Pilih tanggal lahir'
                                   : _formatDate(_birthDate!),
-                              style: TextStyle(
-                                color: _birthDate == null
-                                    ? AppTheme.textHint
-                                    : AppTheme.textPrimary,
-                                fontSize: 13,
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: _birthDate == null
+                                        ? AppTheme.textHint
+                                        : AppTheme.textPrimary,
+                                  ),
                             ),
                           ),
                         ],
@@ -318,7 +313,7 @@ class _RegisterViewState extends State<RegisterView> {
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
 
                 // Password
                 AuthTextField(
@@ -341,7 +336,7 @@ class _RegisterViewState extends State<RegisterView> {
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
                       color: AppTheme.textSecondary,
-                      size: 21,
+                      size: AppTheme.iconSize,
                     ),
                   ),
                   validator: (value) {
@@ -353,7 +348,7 @@ class _RegisterViewState extends State<RegisterView> {
                   },
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
 
                 // Konfirmasi password
                 AuthTextField(
@@ -377,7 +372,7 @@ class _RegisterViewState extends State<RegisterView> {
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
                       color: AppTheme.textSecondary,
-                      size: 21,
+                      size: AppTheme.iconSize,
                     ),
                   ),
                   validator: (value) {
@@ -402,7 +397,7 @@ class _RegisterViewState extends State<RegisterView> {
                   },
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: AppSpacing.xxl),
 
                 // Tombol daftar global
                 AuthButton(
@@ -412,19 +407,16 @@ class _RegisterViewState extends State<RegisterView> {
                   onPressed: _handleRegister,
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
 
                 // Navigasi login
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Flexible(
+                    Flexible(
                       child: Text(
                         'Sudah punya akun?',
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 13,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
                     TextButton(
@@ -436,26 +428,23 @@ class _RegisterViewState extends State<RegisterView> {
                   ],
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xs),
 
-                const Center(
+                Center(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.verified_user_outlined,
                         color: AppTheme.textSecondary,
-                        size: 15,
+                        size: AppTheme.iconSmall,
                       ),
-                      SizedBox(width: 7),
+                      const SizedBox(width: AppSpacing.xs),
                       Flexible(
                         child: Text(
                           'Data kamu diproses dengan aman',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 11,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall,
                         ),
                       ),
                     ],

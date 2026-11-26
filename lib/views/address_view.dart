@@ -4,7 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/address_model.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/common/app_app_bar.dart';
+import '../widgets/common/app_card.dart';
+import '../widgets/common/status_chip.dart';
+import '../widgets/common/app_state_view.dart';
 
 class AddressView extends StatefulWidget {
   const AddressView({super.key});
@@ -69,7 +74,8 @@ class _AddressViewState extends State<AddressView> {
                 ),
               );
             },
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('Hapus'),
           ),
         ],
       ),
@@ -79,110 +85,48 @@ class _AddressViewState extends State<AddressView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: const Text(
-          'Alamat Saya',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: AppTheme.background,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-      ),
-
+      appBar: const AppAppBar(title: 'Alamat Saya'),
       body: Consumer<AddressController>(
-        builder: (context, controller, child) {
+        builder: (context, controller, _) {
           if (controller.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
-
           if (controller.errorMessage != null && controller.addresses.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(controller.errorMessage!, textAlign: TextAlign.center),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: controller.fetchAddresses,
-                    child: const Text('Coba Lagi'),
-                  ),
-                ],
-              ),
+            return AppStateView(
+              icon: Icons.cloud_off_outlined,
+              title: 'Alamat belum termuat',
+              message: controller.errorMessage!,
+              actionLabel: 'Coba lagi',
+              onAction: controller.fetchAddresses,
             );
           }
-
           if (controller.addresses.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.location_off_outlined,
-                      size: 65,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Belum Ada Alamat',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Tambahkan alamat untuk mempermudah pengiriman pesanan.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      onPressed: () => _openForm(),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Tambah Alamat'),
-                    ),
-                  ],
-                ),
-              ),
+            return AppStateView(
+              icon: Icons.location_off_outlined,
+              title: 'Belum ada alamat',
+              message: 'Tambahkan alamat untuk mempermudah pengiriman pesanan.',
+              actionLabel: 'Tambah alamat',
+              onAction: () => _openForm(),
             );
           }
-
           return RefreshIndicator(
             onRefresh: controller.fetchAddresses,
             child: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(AppSpacing.page),
               children: [
-                const Text(
-                  'Daftar Alamat Pengiriman',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  'Alamat pengiriman',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Kelola alamat untuk kebutuhan pengiriman pesanan Anda.',
-                  style: TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 20),
-
-                ...controller.addresses.map(
-                  (address) => _buildAddressCard(address, controller),
-                ),
-
-                const SizedBox(height: 12),
-
+                const SizedBox(height: AppSpacing.md),
+                for (final address in controller.addresses) ...[
+                  _buildAddressCard(address, controller),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
                 OutlinedButton.icon(
                   onPressed: () => _openForm(),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Tambah Alamat Baru'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    foregroundColor: AppTheme.primaryDark,
-                    side: const BorderSide(color: AppTheme.primaryDark),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Tambah alamat baru'),
                 ),
               ],
             ),
@@ -193,108 +137,59 @@ class _AddressViewState extends State<AddressView> {
   }
 
   Widget _buildAddressCard(AddressModel address, AddressController controller) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: address.isPrimary ? AppTheme.primaryDark : AppTheme.border,
-          width: address.isPrimary ? 1.5 : 1,
-        ),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.location_on_outlined,
-                color: AppTheme.primaryDark,
-              ),
-              const SizedBox(width: 8),
+              const Icon(Icons.location_on_outlined),
+              const SizedBox(width: AppSpacing.xs),
               Expanded(
                 child: Text(
                   address.label,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
               if (address.isPrimary)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Utama',
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                const StatusChip(label: 'Utama', tone: AppStatusTone.success),
             ],
           ),
-
-          const SizedBox(height: 12),
-
+          const SizedBox(height: AppSpacing.sm),
           Text(
             address.recipientName,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            style: Theme.of(context).textTheme.bodyLarge,
           ),
-
-          const SizedBox(height: 4),
-
-          Text(address.phone, style: const TextStyle(color: Colors.grey)),
-
-          const SizedBox(height: 10),
-
+          const SizedBox(height: AppSpacing.xxs),
+          Text(address.phone, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             '${address.detail}, '
             '${address.district == null ? '' : '${address.district}, '}'
             '${address.city}, ${address.province}, '
             '${address.postalCode}',
-            style: const TextStyle(height: 1.5, color: AppTheme.textSecondary),
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
-
-          const Divider(height: 25),
-
+          const SizedBox(height: AppSpacing.sm),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.xs,
             children: [
               TextButton.icon(
                 onPressed: () => _openForm(address: address),
-                icon: const Icon(Icons.edit_outlined, size: 17),
+                icon: const Icon(Icons.edit_outlined),
                 label: const Text('Edit'),
               ),
-
               TextButton.icon(
                 onPressed: () => _confirmDelete(address),
-                icon: const Icon(
-                  Icons.delete_outline,
-                  size: 17,
-                  color: Colors.red,
-                ),
-                label: const Text('Hapus', style: TextStyle(color: Colors.red)),
+                icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                label: const Text('Hapus'),
               ),
-
               if (!address.isPrimary)
                 TextButton(
                   onPressed: () async {
                     final success = await controller.setPrimary(address.id);
-
                     if (!mounted) return;
-
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -305,7 +200,7 @@ class _AddressViewState extends State<AddressView> {
                       ),
                     );
                   },
-                  child: const Text('Jadikan Utama'),
+                  child: const Text('Jadikan utama'),
                 ),
             ],
           ),

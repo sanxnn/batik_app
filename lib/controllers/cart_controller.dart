@@ -53,7 +53,7 @@ class CartController extends ChangeNotifier {
 
   // Menambahkan produk
   Future<bool> addToCart({
-    required ProductModel product,
+    ProductModel? product,
     required VariantModel variant,
     required int quantity,
   }) async {

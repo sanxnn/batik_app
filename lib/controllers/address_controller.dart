@@ -6,6 +6,14 @@ import '../services/address_service.dart';
 class AddressController extends ChangeNotifier {
   final AddressService _service = AddressService();
 
+  Future<List<RegionOption>> getProvinces() => _service.getProvinces();
+  Future<List<RegionOption>> getRegencies(String code) =>
+      _service.getRegencies(code);
+  Future<List<RegionOption>> getDistricts(String code) =>
+      _service.getDistricts(code);
+  Future<List<RegionOption>> getVillages(String code) =>
+      _service.getVillages(code);
+
   List<AddressModel> _addresses = [];
 
   bool _isLoading = false;

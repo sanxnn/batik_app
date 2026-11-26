@@ -5,7 +5,15 @@ import '../controllers/order_controller.dart';
 import '../core/network/payment_launcher.dart';
 import '../models/order_model.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/common/app_app_bar.dart';
+import '../widgets/common/app_card.dart';
+import '../widgets/common/app_state_view.dart';
+import '../widgets/common/status_chip.dart';
+import '../widgets/common/app_section.dart';
 import 'order_view.dart';
+import 'refund_view.dart';
 
 class OrderDetailView extends StatefulWidget {
   final int orderId;
@@ -123,97 +131,205 @@ class _OrderDetailViewState extends State<OrderDetailView>
   Widget build(BuildContext context) {
     final order = _order;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Pesanan'),
+      appBar: AppAppBar(
+        title: 'Detail Pesanan',
         actions: [
           IconButton(
             onPressed: _loading ? null : _refresh,
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Perbarui status',
           ),
         ],
       ),
       body: order == null
-          ? Center(
-              child: _loading
-                  ? const CircularProgressIndicator()
-                  : const Text('Pesanan tidak ditemukan.'),
-            )
-          : ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                Text(
-                  order.number,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(orderStatusLabel(order.status)),
-                if (order.paymentStatus != null)
-                  Text('Pembayaran: ${order.paymentStatus}'),
-                const Divider(height: 32),
-                Text('Produk', style: Theme.of(context).textTheme.titleMedium),
-                if (order.items.isEmpty)
-                  const Text('Detail produk belum tersedia.'),
-                for (final item in order.items)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(item.name),
-                    subtitle: Text('${item.variant} • ${item.quantity} item'),
-                    trailing: Text(formatRupiah(item.subtotal)),
+          ? _loading
+                ? const Center(child: CircularProgressIndicator())
+                : AppStateView(
+                    icon: Icons.receipt_long_outlined,
+                    title: 'Pesanan tidak ditemukan',
+                    message: 'Coba muat ulang detail pesanan.',
+                    actionLabel: 'Coba lagi',
+                    onAction: _refresh,
+                  )
+          : RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.page),
+                children: [
+                  AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          order.number,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        StatusChip(
+                          label: orderStatusLabel(order.status),
+                          tone: orderStatusTone(order.status),
+                        ),
+                        if (order.paymentStatus != null) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'Pembayaran: ${order.paymentStatus}',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                const Divider(height: 32),
-                if (order.recipient != null)
-                  Text('Penerima: ${order.recipient}'),
-                if (order.shippingAddress != null) Text(order.shippingAddress!),
-                const SizedBox(height: 16),
-                _amount('Subtotal', order.subtotal),
-                _amount('Diskon', -order.discount),
-                _amount('Ongkir', order.shippingCost),
-                const Divider(),
-                _amount('Total dibayar', order.total, strong: true),
-                const SizedBox(height: 24),
-                if (order.status == 'pending_payment') ...[
-                  FilledButton(
-                    onPressed:
-                        _loading || context.watch<OrderController>().isSaving
-                        ? null
-                        : _pay,
-                    child: const Text('Lanjutkan pembayaran'),
+                  const SizedBox(height: AppSpacing.xl),
+                  const AppSection(title: 'Produk'),
+                  AppCard(
+                    child: Column(
+                      children: [
+                        if (order.items.isEmpty)
+                          Text(
+                            'Detail produk belum tersedia.',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        for (final item in order.items)
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(item.name),
+                            subtitle: Text(
+                              '${item.variant} • ${item.quantity} item',
+                            ),
+                            trailing: Text(formatRupiah(item.subtotal)),
+                          ),
+                      ],
+                    ),
                   ),
-                  TextButton(
-                    onPressed:
-                        _loading || context.watch<OrderController>().isSaving
-                        ? null
-                        : _cancel,
-                    child: const Text('Batalkan pesanan'),
+                  if (order.recipient != null ||
+                      order.shippingAddress != null) ...[
+                    const SizedBox(height: AppSpacing.xl),
+                    const AppSection(title: 'Pengiriman'),
+                    AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (order.recipient != null)
+                            Text(
+                              order.recipient!,
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                          if (order.shippingAddress != null)
+                            Text(
+                              order.shippingAddress!,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.xl),
+                  const AppSection(title: 'Rincian pembayaran'),
+                  AppCard(
+                    child: Column(
+                      children: [
+                        _amount(context, 'Subtotal', order.subtotal),
+                        _amount(context, 'Diskon', -order.discount),
+                        _amount(context, 'Ongkir', order.shippingCost),
+                        const Divider(),
+                        _amount(
+                          context,
+                          'Total dibayar',
+                          order.total,
+                          strong: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (order.status == 'pending_payment') ...[
+                    const SizedBox(height: AppSpacing.xl),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed:
+                            _loading ||
+                                context.watch<OrderController>().isSaving
+                            ? null
+                            : _pay,
+                        child: const Text('Lanjutkan pembayaran'),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed:
+                          _loading || context.watch<OrderController>().isSaving
+                          ? null
+                          : _cancel,
+                      child: const Text('Batalkan pesanan'),
+                    ),
+                  ],
+                  if (order.paymentStatus == 'success' &&
+                      {
+                        'paid',
+                        'processing',
+                        'packing',
+                        'shipped',
+                        'completed',
+                      }.contains(order.status)) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => RefundView(order: order),
+                            ),
+                          );
+                          _refresh();
+                        },
+                        child: Text(
+                          order.refundId == null
+                              ? 'Ajukan refund'
+                              : 'Lihat pengajuan refund',
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Status pembayaran berasal dari server. Perbarui setelah kembali dari Midtrans.',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
-                const Text(
-                  'Status pembayaran berasal dari server. Gunakan tombol perbarui setelah kembali dari Midtrans.',
-                ),
-              ],
+              ),
             ),
     );
   }
 
-  Widget _amount(String label, int amount, {bool strong = false}) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontWeight: strong ? FontWeight.bold : FontWeight.normal,
+  Widget _amount(
+    BuildContext context,
+    String label,
+    int amount, {
+    bool strong = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: strong
+                  ? Theme.of(context).textTheme.bodyLarge
+                  : Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
-        ),
-        Text(
-          formatRupiah(amount),
-          style: TextStyle(
-            fontWeight: strong ? FontWeight.bold : FontWeight.normal,
+          Text(
+            formatRupiah(amount),
+            style:
+                (strong
+                        ? Theme.of(context).textTheme.bodyLarge
+                        : Theme.of(context).textTheme.bodyMedium)
+                    ?.copyWith(color: AppColors.ink),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }

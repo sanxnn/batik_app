@@ -1,0 +1,22 @@
+abstract final class AppSpacing {
+  static const xxs = 4.0;
+  static const xs = 8.0;
+  static const sm = 12.0;
+  static const md = 16.0;
+  static const lg = 20.0;
+  static const xl = 24.0;
+  static const xxl = 32.0;
+  static const page = 20.0;
+  static const contentMaxWidth = 640.0;
+  static const touchTarget = 48.0;
+  static const bannerAspectRatio = 2.25;
+  static const stateHeight = 420.0;
+  static const emptyStateTop = 100.0;
+  static const categoryHeight = 88.0;
+  static const categoryWidth = 76.0;
+  static const categoryIcon = 52.0;
+  static const productMaxWidth = 220.0;
+  static const productHeight = 272.0;
+  static const bundleHeight = 212.0;
+  static const bundleWidth = 170.0;
+}

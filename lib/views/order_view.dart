@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/order_controller.dart';
-import '../models/order_model.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/common/app_app_bar.dart';
+import '../widgets/common/order_card.dart';
+import '../widgets/common/status_chip.dart';
+import '../widgets/common/app_state_view.dart';
 import 'order_detail_view.dart';
 
 class OrderView extends StatefulWidget {
@@ -25,24 +28,19 @@ class _OrderViewState extends State<OrderView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Pesanan Saya')),
+      appBar: const AppAppBar(title: 'Pesanan Saya'),
       body: Consumer<OrderController>(
         builder: (context, controller, _) {
           if (controller.isLoading && controller.orders.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
           if (controller.errorMessage != null && controller.orders.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(controller.errorMessage!, textAlign: TextAlign.center),
-                  TextButton(
-                    onPressed: () => controller.load(refresh: true),
-                    child: const Text('Coba lagi'),
-                  ),
-                ],
-              ),
+            return AppStateView(
+              icon: Icons.cloud_off_outlined,
+              title: 'Pesanan belum termuat',
+              message: controller.errorMessage!,
+              actionLabel: 'Coba lagi',
+              onAction: () => controller.load(refresh: true),
             );
           }
           if (controller.orders.isEmpty) {
@@ -50,8 +48,12 @@ class _OrderViewState extends State<OrderView> {
               onRefresh: () => controller.load(refresh: true),
               child: ListView(
                 children: const [
-                  SizedBox(height: 180),
-                  Center(child: Text('Belum ada pesanan')),
+                  SizedBox(height: AppSpacing.emptyStateTop),
+                  AppStateView(
+                    icon: Icons.receipt_long_outlined,
+                    title: 'Belum ada pesanan',
+                    message: 'Pesanan yang kamu buat akan muncul di sini.',
+                  ),
                 ],
               ),
             );
@@ -59,12 +61,12 @@ class _OrderViewState extends State<OrderView> {
           return RefreshIndicator(
             onRefresh: () => controller.load(refresh: true),
             child: ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.page),
               itemCount: controller.orders.length + 1,
               itemBuilder: (context, index) {
                 if (index == controller.orders.length) {
                   if (!controller.canLoadMore) {
-                    return const SizedBox(height: 24);
+                    return const SizedBox(height: AppSpacing.xl);
                   }
                   return Center(
                     child: TextButton(
@@ -74,32 +76,12 @@ class _OrderViewState extends State<OrderView> {
                   );
                 }
                 final order = controller.orders[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    title: Text(
-                      order.number,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(orderStatusLabel(order.status)),
-                          if (order.createdAt != null)
-                            Text(
-                              '${order.createdAt!.toLocal().day}/${order.createdAt!.toLocal().month}/${order.createdAt!.toLocal().year}',
-                            ),
-                          Text(
-                            formatRupiah(order.total),
-                            style: const TextStyle(color: AppTheme.textPrimary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: OrderCard(
+                    order: order,
+                    statusLabel: orderStatusLabel(order.status),
+                    statusTone: orderStatusTone(order.status),
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -129,4 +111,11 @@ String orderStatusLabel(String status) => switch (status) {
   'completed' => 'Selesai',
   'cancelled' => 'Dibatalkan',
   _ => status,
+};
+
+AppStatusTone orderStatusTone(String status) => switch (status) {
+  'completed' => AppStatusTone.success,
+  'shipped' => AppStatusTone.info,
+  'cancelled' => AppStatusTone.danger,
+  _ => AppStatusTone.warning,
 };

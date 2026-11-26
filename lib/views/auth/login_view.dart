@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -45,12 +47,7 @@ class _LoginViewState extends State<LoginView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(controller.errorMessage ?? 'Login gagal'),
-          backgroundColor: const Color(0xFFD94040),
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+          backgroundColor: AppColors.danger,
         ),
       );
     }
@@ -85,7 +82,7 @@ class _LoginViewState extends State<LoginView> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: AppSpacing.xl),
                 AuthTextField(
                   controller: _passwordCtrl,
                   label: 'Password',
@@ -117,7 +114,7 @@ class _LoginViewState extends State<LoginView> {
                     }
                   },
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xs),
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -126,14 +123,14 @@ class _LoginViewState extends State<LoginView> {
                     child: const Text('Lupa password?'),
                   ),
                 ),
-                const SizedBox(height: 22),
+                const SizedBox(height: AppSpacing.xl),
                 AuthButton(
                   text: 'Masuk',
                   icon: Icons.arrow_forward_rounded,
                   isLoading: controller.isLoading,
                   onPressed: _handleLogin,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 AuthButton(
                   text: 'Daftar Sekarang',
                   outlined: true,

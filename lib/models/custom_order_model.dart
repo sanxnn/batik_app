@@ -7,6 +7,7 @@ class CustomOrderModel {
   final String? estimatedTime;
   final String? adminNotes;
   final int? orderId;
+  final List<CustomOrderAttachment> attachments;
 
   const CustomOrderModel({
     required this.id,
@@ -17,6 +18,7 @@ class CustomOrderModel {
     this.estimatedTime,
     this.adminNotes,
     this.orderId,
+    this.attachments = const [],
   });
 
   factory CustomOrderModel.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,22 @@ class CustomOrderModel {
       estimatedTime: json['estimated_time']?.toString(),
       adminNotes: json['admin_notes']?.toString(),
       orderId: (order['id'] as num?)?.toInt(),
+      attachments: (json['attachments'] as List? ?? const [])
+          .map(
+            (item) => CustomOrderAttachment.fromJson(
+              Map<String, dynamic>.from(item as Map),
+            ),
+          )
+          .toList(),
     );
   }
+}
+
+class CustomOrderAttachment {
+  final String filePath;
+
+  const CustomOrderAttachment(this.filePath);
+
+  factory CustomOrderAttachment.fromJson(Map<String, dynamic> json) =>
+      CustomOrderAttachment(json['file_path']?.toString() ?? '');
 }

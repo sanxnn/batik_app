@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/app_spacing.dart';
 import '../../widgets/auth/auth_layout.dart';
 import '../../widgets/auth/auth_text_field.dart';
 import '../../widgets/auth/auth_button.dart';
@@ -87,7 +88,7 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
     return Consumer<AuthController>(
       builder: (context, controller, _) {
         return AuthLayout(
-          title: 'Verifikasi Email ✉️',
+          title: 'Verifikasi email',
           subtitle: 'Satu langkah lagi untuk mengaktifkan akunmu.',
           child: Form(
             key: _formKey,
@@ -95,7 +96,7 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryLight,
                     borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -104,27 +105,24 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
                     children: [
                       const Icon(
                         Icons.mark_email_read_outlined,
-                        size: 48,
+                        size: AppTheme.iconHero,
                         color: AppTheme.primaryDark,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.sm),
                       const Text(
                         'Kode OTP dikirim ke',
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         widget.email,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimary,
-                        ),
+                        style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: AppSpacing.xxl),
                 AuthTextField(
                   controller: _otpCtrl,
                   label: 'Kode OTP',
@@ -146,14 +144,14 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 AuthButton(
                   text: 'Verifikasi Email',
                   icon: Icons.verified_outlined,
                   isLoading: _isSubmitting || controller.isLoading,
                   onPressed: _handleVerify,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
                 Center(
                   child: TextButton(
                     onPressed: (_isSubmitting || controller.isLoading)
@@ -162,7 +160,7 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
                     child: const Text('Kirim Ulang OTP'),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xs),
                 Center(
                   child: TextButton.icon(
                     onPressed: (_isSubmitting || controller.isLoading)

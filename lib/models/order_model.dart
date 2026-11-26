@@ -9,6 +9,8 @@ class OrderModel {
   final int shippingCost;
   final String? snapToken;
   final String? paymentStatus;
+  final int? refundId;
+  final String? refundStatus;
   final String? recipient;
   final String? shippingAddress;
   final List<OrderItemModel> items;
@@ -25,6 +27,8 @@ class OrderModel {
     this.createdAt,
     this.snapToken,
     this.paymentStatus,
+    this.refundId,
+    this.refundStatus,
     this.recipient,
     this.shippingAddress,
   });
@@ -32,6 +36,7 @@ class OrderModel {
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     final pricing = json['pricing'] is Map ? json['pricing'] as Map : const {};
     final payment = json['payment'] is Map ? json['payment'] as Map : const {};
+    final refund = json['refund'] is Map ? json['refund'] as Map : const {};
     final address = json['address'] is Map ? json['address'] as Map : const {};
     final addressParts = [
       address['detail'],
@@ -50,6 +55,8 @@ class OrderModel {
       shippingCost: _rupiah(pricing['shipping_cost']),
       snapToken: payment['snap_token']?.toString(),
       paymentStatus: payment['payment_status']?.toString(),
+      refundId: (refund['id'] as num?)?.toInt(),
+      refundStatus: refund['status']?.toString(),
       recipient: address['recipient_name']?.toString(),
       shippingAddress: addressParts.isEmpty ? null : addressParts,
       items: (json['items'] as List? ?? const [])

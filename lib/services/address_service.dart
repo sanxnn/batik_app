@@ -5,7 +5,27 @@ import '../core/utils/api_result.dart';
 import '../models/address_model.dart';
 
 class AddressService {
-  final Dio _dio = ApiClient.instance.dio;
+  final Dio _dio;
+
+  AddressService({Dio? dio}) : _dio = dio ?? ApiClient.instance.dio;
+
+  Future<List<RegionOption>> getRegions(String path) async {
+    final response = await _dio.get(path);
+    return (response.data['data'] as List)
+        .map(
+          (item) =>
+              RegionOption.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
+        .toList();
+  }
+
+  Future<List<RegionOption>> getProvinces() => getRegions('/regions/provinces');
+  Future<List<RegionOption>> getRegencies(String provinceCode) =>
+      getRegions('/regions/regencies/${Uri.encodeComponent(provinceCode)}');
+  Future<List<RegionOption>> getDistricts(String cityCode) =>
+      getRegions('/regions/districts/${Uri.encodeComponent(cityCode)}');
+  Future<List<RegionOption>> getVillages(String districtCode) =>
+      getRegions('/regions/villages/${Uri.encodeComponent(districtCode)}');
 
   String _extractErrorMessage(DioException e) {
     final data = e.response?.data;
@@ -123,4 +143,16 @@ class AddressService {
       return ApiResult.error('Gagal mengubah alamat utama.');
     }
   }
+}
+
+class RegionOption {
+  final String code;
+  final String name;
+
+  const RegionOption({required this.code, required this.name});
+
+  factory RegionOption.fromJson(Map<String, dynamic> json) => RegionOption(
+    code: json['code'].toString(),
+    name: json['name'].toString(),
+  );
 }

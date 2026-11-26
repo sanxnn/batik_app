@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/app_spacing.dart';
 import '../../widgets/auth/auth_layout.dart';
 import '../../widgets/auth/auth_text_field.dart';
 import '../../widgets/auth/auth_button.dart';
@@ -84,7 +85,7 @@ class _ResetPasswordOtpViewState extends State<ResetPasswordOtpView> {
     return Consumer<AuthController>(
       builder: (context, controller, _) {
         return AuthLayout(
-          title: 'Verifikasi OTP 🔐',
+          title: 'Verifikasi OTP',
           subtitle:
               'Verifikasi kode terlebih dahulu sebelum membuat password baru.',
           child: Form(
@@ -93,7 +94,7 @@ class _ResetPasswordOtpViewState extends State<ResetPasswordOtpView> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryLight,
                     borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -102,27 +103,24 @@ class _ResetPasswordOtpViewState extends State<ResetPasswordOtpView> {
                     children: [
                       const Icon(
                         Icons.lock_reset_rounded,
-                        size: 48,
+                        size: AppTheme.iconHero,
                         color: AppTheme.primaryDark,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.sm),
                       const Text(
                         'Kode OTP dikirim ke',
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         widget.email,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textPrimary,
-                        ),
+                        style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: AppSpacing.xxl),
                 AuthTextField(
                   controller: _otpCtrl,
                   label: 'Kode OTP',
@@ -144,14 +142,14 @@ class _ResetPasswordOtpViewState extends State<ResetPasswordOtpView> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 AuthButton(
                   text: 'Verifikasi & Lanjut',
                   icon: Icons.arrow_forward_rounded,
                   isLoading: _isSubmitting || controller.isLoading,
                   onPressed: _handleVerify,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
                 Center(
                   child: TextButton(
                     onPressed: (_isSubmitting || controller.isLoading)
@@ -160,7 +158,7 @@ class _ResetPasswordOtpViewState extends State<ResetPasswordOtpView> {
                     child: const Text('Kirim Ulang OTP'),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.xs),
                 Center(
                   child: TextButton.icon(
                     onPressed: (_isSubmitting || controller.isLoading)

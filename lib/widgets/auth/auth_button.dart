@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_theme.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
 
 class AuthButton extends StatelessWidget {
-  final String text;
-  final VoidCallback? onPressed;
-  final bool isLoading;
-  final bool outlined;
-  final IconData? icon;
-
   const AuthButton({
     super.key,
     required this.text,
@@ -18,46 +13,46 @@ class AuthButton extends StatelessWidget {
     this.icon,
   });
 
+  final String text;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+  final bool outlined;
+  final IconData? icon;
+
   @override
   Widget build(BuildContext context) {
-    final Widget content = isLoading
-        ? const SizedBox(
-            width: 21,
-            height: 21,
+    final content = isLoading
+        ? SizedBox(
+            width: AppSpacing.lg,
+            height: AppSpacing.lg,
             child: CircularProgressIndicator(
-              strokeWidth: 2.3,
-              color: AppTheme.textPrimary,
+              strokeWidth: 2,
+              color: outlined ? AppColors.ink : AppColors.onInk,
             ),
           )
         : Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(text),
+              Flexible(child: Text(text, textAlign: TextAlign.center)),
               if (icon != null) ...[
-                const SizedBox(width: 9),
-                Icon(icon, size: 20),
+                const SizedBox(width: AppSpacing.xs),
+                Icon(icon),
               ],
             ],
           );
 
-    if (outlined) {
-      return SizedBox(
-        width: double.infinity,
-        height: 54,
-        child: OutlinedButton(
-          onPressed: isLoading ? null : onPressed,
-          child: content,
-        ),
-      );
-    }
-
     return SizedBox(
       width: double.infinity,
-      height: 55,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        child: content,
-      ),
+      height: AppSpacing.touchTarget + AppSpacing.xs,
+      child: outlined
+          ? OutlinedButton(
+              onPressed: isLoading ? null : onPressed,
+              child: content,
+            )
+          : ElevatedButton(
+              onPressed: isLoading ? null : onPressed,
+              child: content,
+            ),
     );
   }
 }

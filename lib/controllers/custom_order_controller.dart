@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/utils/api_error.dart';
 import '../models/custom_order_model.dart';
@@ -43,18 +44,40 @@ class CustomOrderController extends ChangeNotifier {
     }
   }
 
-  Future<CustomOrderModel?> create(String description) async {
+  Future<CustomOrderModel?> create(
+    String description, {
+    List<XFile> attachments = const [],
+  }) async {
     if (isSaving) return null;
     isSaving = true;
     errorMessage = null;
     notifyListeners();
     try {
-      final order = await service.create(description);
+      final order = await service.create(description, attachments: attachments);
       orders = [order, ...orders];
       return order;
     } catch (error) {
       errorMessage = apiErrorMessage(error);
       return null;
+    } finally {
+      isSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> addAttachments(int id, List<XFile> attachments) async {
+    if (isSaving) return false;
+    isSaving = true;
+    errorMessage = null;
+    notifyListeners();
+    try {
+      final order = await service.addAttachments(id, attachments);
+      final index = orders.indexWhere((item) => item.id == id);
+      if (index >= 0) orders[index] = order;
+      return true;
+    } catch (error) {
+      errorMessage = apiErrorMessage(error);
+      return false;
     } finally {
       isSaving = false;
       notifyListeners();

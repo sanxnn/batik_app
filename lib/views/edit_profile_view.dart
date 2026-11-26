@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/auth_controller.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/auth/auth_button.dart';
+import '../widgets/auth/auth_text_field.dart';
+import '../widgets/common/app_app_bar.dart';
+import '../widgets/common/app_card.dart';
 
 class EditProfileView extends StatefulWidget {
   const EditProfileView({super.key});
@@ -61,7 +67,7 @@ class _EditProfileViewState extends State<EditProfileView> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Color(0xFF6D4C41)),
+            colorScheme: const ColorScheme.light(primary: AppColors.ink),
           ),
           child: child!,
         );
@@ -88,12 +94,10 @@ class _EditProfileViewState extends State<EditProfileView> {
       SnackBar(
         content: Text(
           success
-              ? '✅ Profil berhasil diperbarui'
-              : '❌ ${controller.errorMessage ?? "Gagal memperbarui"}',
+              ? 'Profil berhasil diperbarui'
+              : controller.errorMessage ?? 'Gagal memperbarui',
         ),
-        backgroundColor: success ? Colors.green[700] : Colors.red[700],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: success ? AppColors.success : AppColors.danger,
       ),
     );
 
@@ -111,195 +115,135 @@ class _EditProfileViewState extends State<EditProfileView> {
     }
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, size: 20, color: Colors.grey[600]),
-      filled: true,
-      fillColor: Colors.grey[100],
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF6D4C41), width: 2),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF6D4C41);
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.black87,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Edit Profil',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: Colors.black87,
-            fontSize: 18,
-          ),
-        ),
-        centerTitle: true,
-      ),
+      appBar: const AppAppBar(title: 'Edit Profil'),
       body: Consumer<AuthController>(
         builder: (context, controller, _) {
           if (controller.user == null) {
-            return const Center(
-              child: CircularProgressIndicator(color: primaryColor),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
-
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Informasi Dasar',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _nameCtrl,
-                    decoration: _inputDecoration(
-                      'Nama Lengkap',
-                      Icons.person_outline,
-                    ),
-                    validator: (v) => v == null || v.trim().isEmpty
-                        ? 'Nama wajib diisi'
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: _inputDecoration(
-                      'Alamat Email',
-                      Icons.email_outlined,
-                    ),
-                    validator: (v) => v == null || v.trim().isEmpty
-                        ? 'Email wajib diisi'
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _phoneCtrl,
-                    keyboardType: TextInputType.phone,
-                    decoration: _inputDecoration(
-                      'Nomor WhatsApp / HP',
-                      Icons.phone_outlined,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  const Text(
-                    'Informasi Pribadi',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  DropdownButtonFormField<String>(
-                    initialValue: _gender,
-                    decoration: _inputDecoration(
-                      'Jenis Kelamin',
-                      Icons.people_outline,
-                    ).copyWith(prefixIcon: null),
-                    items: const [
-                      DropdownMenuItem(value: 'Male', child: Text('Laki-laki')),
-                      DropdownMenuItem(
-                        value: 'Female',
-                        child: Text('Perempuan'),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.all(AppSpacing.page),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppSpacing.contentMaxWidth,
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Informasi dasar',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) setState(() => _gender = v);
-                    },
-                    validator: (v) => v == null ? 'Pilih jenis kelamin' : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  InkWell(
-                    onTap: _pickBirthDate,
-                    child: InputDecorator(
-                      decoration: _inputDecoration(
-                        'Tanggal Lahir',
-                        Icons.calendar_today_outlined,
-                      ),
-                      child: Text(
-                        '${_birthDate.day.toString().padLeft(2, '0')}/'
-                        '${_birthDate.month.toString().padLeft(2, '0')}/'
-                        '${_birthDate.year}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.black87,
+                      const SizedBox(height: AppSpacing.md),
+                      AppCard(
+                        child: Column(
+                          children: [
+                            AuthTextField(
+                              controller: _nameCtrl,
+                              label: 'Nama lengkap',
+                              hint: 'Nama lengkap',
+                              icon: Icons.person_outline_rounded,
+                              validator: (v) => v == null || v.trim().isEmpty
+                                  ? 'Nama wajib diisi'
+                                  : null,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            AuthTextField(
+                              controller: _emailCtrl,
+                              label: 'Alamat email',
+                              hint: 'nama@email.com',
+                              icon: Icons.email_outlined,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (v) => v == null || v.trim().isEmpty
+                                  ? 'Email wajib diisi'
+                                  : null,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            AuthTextField(
+                              controller: _phoneCtrl,
+                              label: 'Nomor WhatsApp / HP',
+                              hint: 'Nomor HP (opsional)',
+                              icon: Icons.phone_outlined,
+                              keyboardType: TextInputType.phone,
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: controller.isLoading ? null : _handleUpdate,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        elevation: 4,
-                        shadowColor: primaryColor.withValues(alpha: 0.3),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        'Informasi pribadi',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      child: controller.isLoading
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              'Simpan Perubahan',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
+                      const SizedBox(height: AppSpacing.md),
+                      AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Jenis kelamin',
+                              style: Theme.of(context).textTheme.labelLarge,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            DropdownButtonFormField<String>(
+                              initialValue: _gender,
+                              decoration: const InputDecoration(),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'Male',
+                                  child: Text('Laki-laki'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Female',
+                                  child: Text('Perempuan'),
+                                ),
+                              ],
+                              onChanged: (v) {
+                                if (v != null) setState(() => _gender = v);
+                              },
+                              validator: (v) =>
+                                  v == null ? 'Pilih jenis kelamin' : null,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              'Tanggal lahir',
+                              style: Theme.of(context).textTheme.labelLarge,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            InkWell(
+                              onTap: _pickBirthDate,
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                  prefixIcon: Icon(
+                                    Icons.calendar_today_outlined,
+                                  ),
+                                ),
+                                child: Text(
+                                  '${_birthDate.day.toString().padLeft(2, '0')}/'
+                                  '${_birthDate.month.toString().padLeft(2, '0')}/'
+                                  '${_birthDate.year}',
+                                  style: Theme.of(context).textTheme.bodyLarge,
+                                ),
                               ),
                             ),
-                    ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      AuthButton(
+                        text: 'Simpan Perubahan',
+                        isLoading: controller.isLoading,
+                        onPressed: controller.isLoading ? null : _handleUpdate,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                ],
+                ),
               ),
             ),
           );

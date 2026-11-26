@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/app_spacing.dart';
 import '../../widgets/auth/auth_layout.dart';
 import '../../widgets/auth/auth_text_field.dart';
 import '../../widgets/auth/auth_button.dart';
@@ -55,7 +56,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
     return Consumer<AuthController>(
       builder: (context, controller, _) {
         return AuthLayout(
-          title: 'Lupa Password? 🔐',
+          title: 'Lupa password?',
           subtitle:
               'Tenang, kami bantu kamu kembali ke akun Batik Rubung Kuning.',
           child: Form(
@@ -65,7 +66,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
               children: [
                 // Informasi reset password
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryLight,
                     borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
@@ -76,9 +77,9 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                       const Icon(
                         Icons.mark_email_unread_outlined,
                         color: AppTheme.primaryDark,
-                        size: 26,
+                        size: AppTheme.iconLarge,
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,7 +92,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                                     color: AppTheme.textPrimary,
                                   ),
                             ),
-                            const SizedBox(height: 5),
+                            const SizedBox(height: AppSpacing.xxs),
                             Text(
                               'Masukkan email yang terdaftar. Kami akan '
                               'mengirimkan kode OTP untuk mengatur ulang '
@@ -109,7 +110,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                   ),
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: AppSpacing.xxl),
 
                 AuthTextField(
                   controller: _emailCtrl,
@@ -138,7 +139,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                   },
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
 
                 AuthButton(
                   text: 'Kirim Kode OTP',
@@ -147,7 +148,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                   onPressed: _handleForgot,
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
 
                 Center(
                   child: TextButton.icon(
@@ -156,7 +157,10 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                         : () {
                             Navigator.pushReplacementNamed(context, '/login');
                           },
-                    icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      size: AppTheme.iconSmall,
+                    ),
                     label: const Text('Kembali ke halaman login'),
                     style: TextButton.styleFrom(
                       foregroundColor: AppTheme.textSecondary,
@@ -164,7 +168,7 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
 
                 Center(
                   child: Text(

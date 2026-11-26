@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/auth_controller.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/common/batik_accent.dart';
 
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
@@ -103,134 +106,76 @@ class _SplashViewState extends State<SplashView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background, // Putih bersih
-      body: Stack(
-        children: [
-          // --- BACKGROUND SHAPES (Dribbble Style Soft Blobs) ---
-          Positioned(
-            top: -80,
-            right: -80,
-            child: ScaleTransition(
-              scale: _shape1Anim,
-              child: Container(
-                width: 250,
-                height: 250,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryLight,
-                  shape: BoxShape.circle,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned(
+              top: -AppSpacing.xxl,
+              right: -AppSpacing.xxl,
+              child: ScaleTransition(
+                scale: _shape1Anim,
+                child: const CircleAvatar(
+                  radius: AppSpacing.categoryIcon,
+                  backgroundColor: AppColors.yellowTint,
                 ),
               ),
             ),
-          ),
-          Positioned(
-            bottom: -60,
-            left: -60,
-            child: ScaleTransition(
-              scale: _shape2Anim,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryLight.withValues(alpha: 0.6),
-                  shape: BoxShape.circle,
+            Positioned(
+              bottom: -AppSpacing.xxl,
+              left: -AppSpacing.xxl,
+              child: ScaleTransition(
+                scale: _shape2Anim,
+                child: const CircleAvatar(
+                  radius: AppSpacing.categoryIcon,
+                  backgroundColor: AppColors.yellowTint,
                 ),
               ),
             ),
-          ),
-
-          // --- MAIN CONTENT ---
-          Center(
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+            const Positioned.fill(child: BatikAccent(opacity: 0.02)),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.page),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // 1. LOGO CONTAINER
                     ScaleTransition(
                       scale: _logoAnim,
                       child: Container(
-                        width: 110,
-                        height: 110,
+                        width: AppSpacing.categoryIcon + AppSpacing.xxl,
+                        height: AppSpacing.categoryIcon + AppSpacing.xxl,
                         decoration: BoxDecoration(
-                          color: AppTheme.background,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primary.withValues(alpha: 0.15),
-                              blurRadius: 30,
-                              offset: const Offset(0, 15),
-                            ),
-                          ],
+                          color: AppColors.brandYellow,
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                         ),
                         child: const Icon(
-                          Icons.storefront_rounded, // Ganti dengan Image.asset('assets/logo.png') jika ada
-                          size: 56,
-                          color: AppTheme.primaryDark,
+                          Icons.storefront_outlined,
+                          color: AppColors.ink,
+                          size: AppSpacing.xxl,
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 32),
-
-                    // 2. TEXT CONTENT (Fade & Slide Up)
+                    const SizedBox(height: AppSpacing.xl),
                     FadeTransition(
                       opacity: _textAnim,
-                      child: Transform.translate(
-                        offset: Offset(
-                          0,
-                          15 * (1 - _textAnim.value),
-                        ), // Efek slide up 15px
-                        child: Column(
-                          children: [
-                            const Text(
-                              'Batik Rubung Kuning',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.textPrimary,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Authentic Indonesian Heritage',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.textSecondary,
-                                fontStyle: FontStyle.italic,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                          ],
-                        ),
+                      child: Text(
+                        'Batik Rubung Kuning',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.displaySmall,
                       ),
                     ),
-
-                    const SizedBox(height: 64),
-
-                    // 3. MODERN LOADER
-                    FadeTransition(
-                      opacity: _textAnim, // Muncul bersamaan dengan teks
-                      child: SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3,
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppTheme.primary,
-                          ),
-                          backgroundColor: AppTheme.primaryLight,
-                        ),
-                      ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Karya batik dari Jember',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
+                    const SizedBox(height: AppSpacing.xxl),
+                    const CircularProgressIndicator(),
                   ],
-                );
-              },
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

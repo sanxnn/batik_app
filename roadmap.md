@@ -70,8 +70,12 @@ Error aturan bisnis biasanya hanya memuat `message`, kadang disertai `available_
 | `GET /auth/me` | Privat | Profil pelanggan. |
 | `PUT /auth/profile` | Privat | `name`, `email`, `phone?`, `gender`, `birth_date`. |
 | `POST /auth/logout` | Privat | Cabut token saat ini. |
+| `GET /regions/provinces` | Publik | Daftar provinsi dari wilayah.id. |
+| `GET /regions/regencies/{provinceCode}` | Publik | Kabupaten/kota dalam provinsi. |
+| `GET /regions/districts/{cityCode}` | Publik | Kecamatan dalam kabupaten/kota. |
+| `GET /regions/villages/{districtCode}` | Publik | Desa/kelurahan dalam kecamatan. |
 | `GET /addresses` | Privat | Daftar alamat. |
-| `POST /addresses` | Privat | Buat alamat; field di bagian Alamat. |
+| `POST /addresses` | Privat | Buat alamat dengan kode wilayah atau nama lama; field di bagian Alamat. |
 | `GET /addresses/{id}` | Privat | Detail alamat milik pelanggan. |
 | `PUT /addresses/{id}` | Privat | Ubah alamat; field sama dengan pembuatan. |
 | `PATCH /addresses/{id}/primary` | Privat | Jadikan alamat utama; tanpa body. |
@@ -87,8 +91,9 @@ Error aturan bisnis biasanya hanya memuat `message`, kadang disertai `available_
 | `POST /orders/{id}/cancel` | Privat | Batalkan pesanan `pending_payment`; tanpa body. |
 | `POST /payments/{orderId}/snap-token` | Privat | Buat/ambil token pembayaran; tanpa body. |
 | `GET /custom-orders` | Privat | Riwayat custom order, query `page`. |
-| `POST /custom-orders` | Privat | `description` minimal 10 karakter. |
+| `POST /custom-orders` | Privat | `description` minimal 10 karakter; `attachments[]` gambar opsional. |
 | `GET /custom-orders/{id}` | Privat | Detail custom order. |
+| `POST /custom-orders/{id}/attachments` | Privat | Tambah `attachments[]` saat status `pending_review`. |
 | `POST /custom-orders/{id}/approve` | Privat | Setujui quotation: `address_id`, `notes?`. |
 | `POST /custom-orders/{id}/cancel` | Privat | Batalkan saat `pending_review`/`quoted`; tanpa body. |
 
@@ -291,7 +296,28 @@ Pesan berbeda jika email tidak berubah. Saat email berubah, tampilkan layar veri
 
 ## Alamat
 
-`POST /addresses` dan `PUT /addresses/{id}` memakai field wajib yang sama. `district` dan `is_primary` opsional; alamat pertama otomatis menjadi utama.
+Untuk form alamat dinamis, panggil berurutan `GET /regions/provinces`, `GET /regions/regencies/{provinceCode}`, `GET /regions/districts/{cityCode}`, dan `GET /regions/villages/{districtCode}`. Setiap respons berisi `data: [{"code":"...","name":"..."}]`. Kode bertitik harus dikirim utuh, misalnya `31.74.09`. Backend mengambil data dari [wilayah.id](https://wilayah.id/), menyimpannya dalam cache satu hari, dan mengembalikan `503` saat layanan wilayah tidak tersedia.
+
+`POST /addresses` dan `PUT /addresses/{id}` menerima empat kode wilayah berikut sebagai satu paket. Nama `province`, `city`, `district`, dan `village` diambil dari wilayah.id oleh backend; kode yang tidak ada atau tidak sesuai wilayah induknya ditolak dengan `422`. `postal_code` tetap wajib diisi manual dengan lima digit karena endpoint wilayah.id tidak menyediakan kode pos. `is_primary` opsional; alamat pertama otomatis menjadi utama.
+
+```json
+{
+  "label": "Rumah",
+  "recipient_name": "Siti Aminah",
+  "phone": "081234567890",
+  "province_code": "31",
+  "city_code": "31.74",
+  "district_code": "31.74.09",
+  "village_code": "31.74.09.1002",
+  "postal_code": "12640",
+  "detail": "Jl. Mawar No. 10",
+  "is_primary": true
+}
+```
+
+Payload lama yang mengirim nama `province`, `city`, dan `district` tetap diterima untuk kompatibilitas. Kode wilayah pada alamat lama bernilai `null`; bila alamat dengan kode diperbarui memakai payload nama lama, kode wilayahnya dikosongkan.
+
+Contoh payload lama:
 
 ```json
 {
@@ -317,8 +343,13 @@ Pesan berbeda jika email tidak berubah. Saat email berubah, tampilkan layar veri
     "recipient_name": "Siti Aminah",
     "phone": "081234567890",
     "province": "Jawa Timur",
+    "province_code": null,
     "city": "Jember",
+    "city_code": null,
     "district": "Sumbersari",
+    "district_code": null,
+    "village": null,
+    "village_code": null,
     "postal_code": "68121",
     "detail": "Jl. Mawar No. 10",
     "full_address": "Jl. Mawar No. 10, Kec. Sumbersari, Jember, Jawa Timur, 68121",
@@ -449,9 +480,9 @@ Objek order pada response riwayat tetap mempunyai field lain seperti `promo`, `s
 
 ## Custom order
 
-Custom order adalah permintaan produk sesuai deskripsi pelanggan. Admin meninjau dan memberi quotation sebelum pelanggan memilih alamat dan membuat order pembayaran. Saat ini request pelanggan hanya menerima **teks deskripsi**; belum ada endpoint upload lampiran meski resource dapat menampilkan `attachments` yang sudah ada.
+Custom order adalah permintaan produk sesuai deskripsi pelanggan. Admin meninjau dan memberi quotation sebelum pelanggan memilih alamat dan membuat order pembayaran. Pelanggan dapat menyertakan gambar saat membuat permintaan atau menambahkannya selama status masih `pending_review`.
 
-`POST /custom-orders`:
+`POST /custom-orders` menerima `description` sebagai JSON jika tanpa gambar. Untuk menyertakan gambar, kirim `multipart/form-data` dengan `description` dan `attachments[]` (opsional). Contoh tanpa gambar:
 
 ```json
 { "description": "Saya ingin batik tulis motif bunga warna biru untuk acara keluarga." }
@@ -479,6 +510,8 @@ Response `201` (juga bentuk detail `GET /custom-orders/{id}`):
 
 `GET /custom-orders` memakai `data: [<CustomOrderResource>, ...]`, `links`, dan `meta` dengan `per_page: 10`. Setelah admin memberi penawaran, `status` menjadi `quoted` dan `estimated_price`, `estimated_time`, `admin_notes` terisi sesuai keputusan admin.
 
+`POST /custom-orders/{id}/attachments` menerima `multipart/form-data` dengan satu atau beberapa `attachments[]` dan mengembalikan `CustomOrderResource` lengkap dengan status `201`. Hanya pemilik dapat menambah gambar saat status `pending_review`. Batas total adalah 5 gambar per custom order, masing-masing maksimal 2 MB, berformat JPEG, PNG, atau WebP. Ukuran total satu request juga mengikuti `post_max_size` PHP; unggah bertahap jika batas server lebih kecil. Validasi gagal mengembalikan `422`; ID milik pelanggan lain mengembalikan `404`. Setiap `attachments[].file_path` adalah path relatif pada disk publik dan dapat ditampilkan melalui `/api/storage-image/{file_path}`.
+
 `POST /custom-orders/4/approve` hanya saat `quoted`:
 
 ```json
@@ -503,8 +536,8 @@ Response `201`:
 | 1. Dasar aplikasi | Tinggi | Konfigurasi base URL per environment, client HTTP dengan header JSON/Bearer, penyimpanan token aman, parsing error `401/403/422/429`, dan model pagination katalog vs resource collection. |
 | 2. Katalog | Tinggi | Beranda, kategori/subkategori, filter `category_id`/`subcategory_id`, pencarian, detail produk/bundling, pilihan varian, dan pemuatan gambar. |
 | 3. Akun dan transaksi | Tinggi | OTP email, login/profil, alamat, keranjang, checkout, Snap Midtrans, polling/refresh detail order, riwayat, pembatalan pending. Uji bersama MySQL, RajaOngkir, SMTP, dan Midtrans sandbox. |
-| 4. Custom order | Sedang | Permintaan teks, daftar/detail, quotation, approve, pembayaran, dan pembatalan. |
-| 5. Perluasan API | Sedang | Jika dibutuhkan desain Flutter: endpoint pratinjau ongkir/promo/voucher sebelum checkout, daftar voucher publik, upload lampiran custom order, dan filter/sort produk menurut harga/stok. Selaraskan pula `shipping.weight` pada response order dengan berat konfigurasi. Endpoint perluasan tersebut **belum tersedia**; jangan panggil sebagai endpoint aktif. |
+| 4. Custom order | Sedang | Permintaan teks dan gambar, daftar/detail, quotation, approve, pembayaran, dan pembatalan. |
+| 5. Perluasan API | Sedang | Jika dibutuhkan desain Flutter: endpoint pratinjau ongkir/promo/voucher sebelum checkout, daftar voucher publik, dan filter/sort produk menurut harga/stok. Upload lampiran gambar custom order sudah tersedia. `shipping.weight` pada response order tetap `2000` dan tidak digunakan sebagai bukti berat aktual. Endpoint perluasan lainnya **belum tersedia**; jangan panggil sebagai endpoint aktif. |
 | 6. Operasional | Sedang | Tetapkan kontrak API versi stabil, tambah pengujian respons JSON dan perangkat nyata terhadap URL production, serta pastikan webhook Midtrans mengarah ke URL production. |
 
 Dokumen ini mencatat perilaku backend saat ini, bukan janji endpoint baru. Jika kontrak API berubah, perbarui contoh response dan model Flutter bersama perubahan controller/resource terkait.

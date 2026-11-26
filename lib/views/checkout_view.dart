@@ -6,6 +6,11 @@ import '../controllers/cart_controller.dart';
 import '../controllers/order_controller.dart';
 import '../models/order_model.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../widgets/common/app_app_bar.dart';
+import '../widgets/common/app_card.dart';
+import '../widgets/common/app_section.dart';
 import 'address_view.dart';
 import 'order_detail_view.dart';
 
@@ -84,40 +89,57 @@ class _CheckoutViewState extends State<CheckoutView> {
     final addresses = context.watch<AddressController>();
     final cart = context.watch<CartController>();
     final orders = context.watch<OrderController>();
+    final canCheckout =
+        !orders.isSaving &&
+        !addresses.isLoading &&
+        addresses.errorMessage == null &&
+        _addressId != null &&
+        !cart.isEmpty;
     return Scaffold(
-      appBar: AppBar(title: const Text('Checkout')),
+      appBar: const AppAppBar(title: 'Checkout'),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.all(AppSpacing.page),
         children: [
-          Text(
-            'Alamat pengiriman',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
+          const AppSection(title: 'Alamat pengiriman'),
           if (addresses.isLoading) const LinearProgressIndicator(),
           if (addresses.errorMessage != null)
-            Text(
-              addresses.errorMessage!,
-              style: const TextStyle(color: AppTheme.error),
+            AppCard(
+              child: Text(
+                addresses.errorMessage!,
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: AppColors.danger),
+              ),
             ),
           if (!addresses.isLoading && addresses.addresses.isEmpty)
-            const Text('Belum ada alamat. Tambahkan alamat sebelum checkout.'),
-          for (final address in addresses.addresses)
-            ListTile(
-              selected: _addressId == address.id,
-              leading: Icon(
-                _addressId == address.id
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_off,
+            const AppCard(
+              child: Text(
+                'Belum ada alamat. Tambahkan alamat sebelum checkout.',
               ),
-              title: Text('${address.label} • ${address.recipientName}'),
-              subtitle: Text(
-                '${address.detail}, ${address.city}, ${address.province} ${address.postalCode}',
-              ),
-              onTap: orders.isSaving
-                  ? null
-                  : () => setState(() => _addressId = address.id),
             ),
+          for (final address in addresses.addresses) ...[
+            AppCard(
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  _addressId == address.id
+                      ? Icons.radio_button_checked_rounded
+                      : Icons.radio_button_off_rounded,
+                  color: _addressId == address.id
+                      ? AppColors.ink
+                      : AppColors.textSecondary,
+                ),
+                onTap: orders.isSaving
+                    ? null
+                    : () => setState(() => _addressId = address.id),
+                title: Text('${address.label} • ${address.recipientName}'),
+                subtitle: Text(
+                  '${address.detail}, ${address.city}, ${address.province} ${address.postalCode}',
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+          ],
           TextButton.icon(
             onPressed: () async {
               await Navigator.push(
@@ -136,60 +158,85 @@ class _CheckoutViewState extends State<CheckoutView> {
             icon: const Icon(Icons.edit_location_alt_outlined),
             label: const Text('Kelola alamat'),
           ),
-          const Divider(height: 32),
-          Text('Ringkasan', style: Theme.of(context).textTheme.titleMedium),
-          for (final item in cart.items)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(item.variant.product.name),
-              subtitle: Text('${item.variant.name} • ${item.quantity} item'),
-              trailing: Text(formatRupiah(item.subtotal)),
+          const SizedBox(height: AppSpacing.xl),
+          const AppSection(title: 'Ringkasan belanja'),
+          AppCard(
+            child: Column(
+              children: [
+                for (final item in cart.items)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(item.variant.product.name),
+                    subtitle: Text(
+                      '${item.variant.name} • ${item.quantity} item',
+                    ),
+                    trailing: Text(formatRupiah(item.subtotal)),
+                  ),
+                const Divider(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Subtotal',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ),
+                    Text(
+                      formatRupiah(cart.totalPrice),
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ],
+                ),
+              ],
             ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Diskon dan ongkir final dihitung oleh server saat checkout.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          const AppSection(title: 'Informasi tambahan'),
           TextField(
             controller: _voucher,
             decoration: const InputDecoration(
               labelText: 'Kode voucher (opsional)',
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.sm),
           TextField(
             controller: _notes,
             maxLines: 3,
             decoration: const InputDecoration(labelText: 'Catatan (opsional)'),
           ),
-          const SizedBox(height: 20),
-          Text(
-            'Subtotal: ${formatRupiah(cart.totalPrice)}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const Text(
-            'Diskon dan ongkir final akan dihitung oleh server saat checkout.',
-          ),
-          if (orders.errorMessage != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text(
-                orders.errorMessage!,
-                style: const TextStyle(color: AppTheme.error),
-              ),
+          if (orders.errorMessage != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              orders.errorMessage!,
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: AppColors.danger),
             ),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed:
-                orders.isSaving ||
-                    addresses.isLoading ||
-                    addresses.errorMessage != null ||
-                    _addressId == null ||
-                    cart.isEmpty
-                ? null
-                : _checkout,
+          ],
+          const SizedBox(height: AppSpacing.xxl),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.border)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: ElevatedButton(
+            onPressed: canCheckout ? _checkout : null,
             child: Text(
               orders.isSaving
                   ? 'Membuat pesanan...'
                   : 'Buat pesanan dan lanjut bayar',
             ),
           ),
-        ],
+        ),
       ),
     );
   }

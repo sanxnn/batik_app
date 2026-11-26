@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_radius.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_shadows.dart';
 
 class HomeSearchBar extends StatefulWidget {
   final TextEditingController controller;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
+  final VoidCallback? onFilter;
 
   const HomeSearchBar({
     super.key,
     required this.controller,
     this.onChanged,
     this.onSubmitted,
+    this.onFilter,
   });
 
   @override
@@ -70,26 +76,27 @@ class _HomeSearchBarState extends State<HomeSearchBar> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeInOut,
-      height: 50,
+      height: 56,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
         border: Border.all(
-          color: _isFocused ? AppTheme.primary : const Color(0xFFE5E7EB),
+          color: _isFocused ? AppColors.ink : AppColors.border,
           width: 1,
         ),
+        boxShadow: AppShadows.subtle,
       ),
       child: Row(
         children: [
-          const SizedBox(width: 14),
+          const SizedBox(width: AppSpacing.md),
 
           Icon(
             Icons.search_rounded,
             size: 22,
-            color: _isFocused ? AppTheme.primary : const Color(0xFF9CA3AF),
+            color: _isFocused ? AppColors.ink : AppColors.textSecondary,
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.sm),
 
           Expanded(
             child: TextField(
@@ -99,18 +106,10 @@ class _HomeSearchBarState extends State<HomeSearchBar> {
               onSubmitted: widget.onSubmitted,
               cursorColor: AppTheme.primary,
               textInputAction: TextInputAction.search,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-                color: Color(0xFF1F2937),
-              ),
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: AppColors.ink),
               decoration: const InputDecoration(
                 hintText: 'Cari produk batik...',
-                hintStyle: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF9CA3AF),
-                  fontWeight: FontWeight.w400,
-                ),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -129,15 +128,21 @@ class _HomeSearchBarState extends State<HomeSearchBar> {
                     icon: const Icon(
                       Icons.close_rounded,
                       size: 19,
-                      color: Color(0xFF9CA3AF),
+                      color: AppColors.textTertiary,
                     ),
-                    splashRadius: 18,
-                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Hapus pencarian',
                   )
-                : const SizedBox(key: ValueKey('empty'), width: 12),
+                : const SizedBox(key: ValueKey('empty'), width: AppSpacing.xxs),
           ),
-
-          const SizedBox(width: 4),
+          if (widget.onFilter != null) ...[
+            Container(width: 1, height: 24, color: AppColors.border),
+            IconButton(
+              onPressed: widget.onFilter,
+              tooltip: 'Pilih kategori',
+              icon: const Icon(Icons.tune_rounded, color: AppColors.ink),
+            ),
+          ],
+          const SizedBox(width: AppSpacing.xxs),
         ],
       ),
     );

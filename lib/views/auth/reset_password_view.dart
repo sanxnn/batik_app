@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/app_spacing.dart';
 import '../../widgets/auth/auth_layout.dart';
 import '../../widgets/auth/auth_text_field.dart';
 import '../../widgets/auth/auth_button.dart';
@@ -88,7 +89,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
     return Consumer<AuthController>(
       builder: (context, controller, _) {
         return AuthLayout(
-          title: 'Buat Password Baru 🔑',
+          title: 'Buat password baru',
           subtitle:
               'Pastikan password baru Anda mudah diingat namun tetap aman.',
           child: Form(
@@ -112,7 +113,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.md),
                 AuthTextField(
                   controller: _confirmPasswordCtrl,
                   label: 'Konfirmasi Password',
@@ -129,14 +130,14 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.xl),
                 AuthButton(
                   text: 'Simpan Password',
                   icon: Icons.check_circle_outline,
                   isLoading: _isSubmitting || controller.isLoading,
                   onPressed: _handleReset,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.sm),
                 Center(
                   child: TextButton.icon(
                     onPressed: (_isSubmitting || controller.isLoading)
