@@ -41,4 +41,14 @@
 3. Saat penawaran tersedia, buka kartu untuk melihat estimasi harga, waktu, dan catatan admin. Pilih **Setujui penawaran**, tentukan alamat, lalu konfirmasi. Laravel membuat pesanan terkait untuk dibayar melalui alur Snap.
 4. Pengajuan dapat dibatalkan saat menunggu peninjauan atau ketika penawaran tersedia. Setelah penawaran disetujui, gunakan detail pesanan terkait untuk pembayaran dan aksi pesanan yang tersedia.
 
-[Peta endpoint per fitur](../roadmap.md) · [Alur dan status sistem](alur-sistem.md)
+[Peta endpoint per fitur](referensi-integrasi-api.md) · [Alur dan status sistem](alur-sistem.md)
+
+## Akses menu dan batasan antarmuka
+
+| Aksi | Lokasi dan perilaku saat ini |
+| --- | --- |
+| Buka riwayat pesanan | Gunakan tab **Pesanan** pada navigasi bawah. Baris **Pesanan Saya** di Profil masih menampilkan pemberitahuan sementara. |
+| Buka riwayat refund | Gunakan ikon **Riwayat refund** pada bilah atas tab **Pesanan**. |
+| Buka detail paket | Pilih kartu pada bagian paket di **Beranda**, lalu pilih varian untuk menampilkan komponen dan membeli. |
+| Cari produk | Flutter mengirim pencarian dan filter kategori pada daftar produk reguler. Respons kategori membawa subkategori, tetapi UI saat ini hanya mengirim filter kategori. |
+| Kelola bantuan atau favorit | Bantuan & FAQ di Profil dan tombol favorit belum terhubung dengan alur backend. |

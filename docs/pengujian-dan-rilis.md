@@ -49,3 +49,22 @@ flutter build ipa --release --dart-define=MIDTRANS_ENV=production
 ```
 
 Validasi rilis di Android dan iOS untuk secure storage, pemilihan foto, pembukaan Snap, dan pembacaan status pembayaran saat aplikasi aktif kembali.
+
+## Data dan kondisi uji
+
+- Gunakan akun pelanggan lokal dengan alamat, produk reguler berstok, satu varian Batik berstok nol, bundle dengan komponen tersedia, serta voucher aktif. Gunakan fixture terpisah untuk stok habis dan voucher kedaluwarsa.
+- Siapkan pesanan pending, pesanan berbayar yang sudah dikirim dengan resi, serta pesanan batal dengan pembayaran sukses. Gunakan akun kedua untuk memastikan bukti refund hanya dapat diambil pemilik. Gunakan gambar contoh dan data pelanggan fiktif.
+- Siapkan custom order menunggu peninjauan dan penawaran yang sudah tersedia. Verifikasi pembentukan pesanan terkait setelah memilih alamat. Pengiriman email dan pembayaran eksternal perlu lingkungan uji yang sesuai.
+
+## Diagnosis
+
+| Gejala | Pemeriksaan |
+| --- | --- |
+| Katalog gagal dimuat | Akses `GET /api/products` dari perangkat atau browser yang sama. Periksa host, prefiks `/api`, HTTPS, dan CORS jika origin berbeda. |
+| OTP belum diterima | Periksa mailer Laravel. Jika memakai log lokal, cari kiriman OTP di log backend pengembangan. Gunakan kirim ulang sesuai batas percobaan. |
+| Form wilayah tidak memuat pilihan berikutnya | Pastikan kode induk dikirim lengkap. Respons `503` mengindikasikan layanan wilayah sementara tidak tersedia. |
+| Checkout gagal | Periksa pesan backend, stok, alamat, dan konfigurasi RajaOngkir. Jika request terputus, cek daftar pesanan dan keranjang sebelum mencoba lagi. |
+| Snap terbuka tetapi status masih pending | Verifikasi token berasal dari lingkungan Midtrans yang sesuai, periksa status transaksi dan pengiriman webhook pada Laravel, lalu perbarui detail pesanan. |
+| Bukti refund gagal dibuka | Periksa sesi pelanggan, kepemilikan refund, dan respons byte gambar. Hindari mencatat token, isi bukti, atau data pelanggan pada laporan masalah. |
+
+[Indeks dokumentasi](README.md) · [Alur sistem](alur-sistem.md)
