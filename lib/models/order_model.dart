@@ -1,3 +1,5 @@
+import 'refund_model.dart';
+
 class OrderModel {
   final int id;
   final String number;
@@ -12,6 +14,24 @@ class OrderModel {
   final String? recipient;
   final String? shippingAddress;
   final List<OrderItemModel> items;
+  final String? courier;
+  final String? trackingNumber;
+  final RefundModel? refund;
+  final bool isCustomOrder;
+
+  bool get canComplete => status == 'shipped' && paymentStatus == 'success';
+
+  bool get canRequestRefund =>
+      paymentStatus == 'success' &&
+      const [
+        'paid',
+        'processing',
+        'packing',
+        'shipped',
+        'completed',
+        'cancelled',
+      ].contains(status) &&
+      (refund?.allowsNewRequest ?? true);
 
   const OrderModel({
     required this.id,
@@ -27,14 +47,24 @@ class OrderModel {
     this.paymentStatus,
     this.recipient,
     this.shippingAddress,
+    this.courier,
+    this.trackingNumber,
+    this.refund,
+    this.isCustomOrder = false,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     final pricing = json['pricing'] is Map ? json['pricing'] as Map : const {};
     final payment = json['payment'] is Map ? json['payment'] as Map : const {};
     final address = json['address'] is Map ? json['address'] as Map : const {};
+    final shipping = json['shipping'] is Map
+        ? json['shipping'] as Map
+        : const {};
+    final refund = json['refund'];
     final addressParts = [
       address['detail'],
+      address['village'],
+      address['district'],
       address['city'],
       address['province'],
       address['postal_code'],
@@ -52,6 +82,10 @@ class OrderModel {
       paymentStatus: payment['payment_status']?.toString(),
       recipient: address['recipient_name']?.toString(),
       shippingAddress: addressParts.isEmpty ? null : addressParts,
+      courier: shipping['courier']?.toString(),
+      trackingNumber: shipping['resi_number']?.toString(),
+      refund: refund is Map ? RefundModel.fromJson(refund) : null,
+      isCustomOrder: json['is_custom_order'] == true,
       items: (json['items'] as List? ?? const [])
           .map(
             (item) =>

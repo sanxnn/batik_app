@@ -5,6 +5,7 @@ import '../controllers/order_controller.dart';
 import '../models/order_model.dart';
 import '../theme/app_theme.dart';
 import 'order_detail_view.dart';
+import 'refund_history_view.dart';
 
 class OrderView extends StatefulWidget {
   const OrderView({super.key});
@@ -25,7 +26,19 @@ class _OrderViewState extends State<OrderView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Pesanan Saya')),
+      appBar: AppBar(
+        actions: [
+          IconButton(
+            tooltip: 'Riwayat refund',
+            icon: const Icon(Icons.receipt_long_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const RefundHistoryView()),
+            ),
+          ),
+        ],
+        title: const Text('Pesanan Saya'),
+      ),
       body: Consumer<OrderController>(
         builder: (context, controller, _) {
           if (controller.isLoading && controller.orders.isEmpty) {

@@ -5,7 +5,9 @@ import '../core/utils/api_result.dart';
 import '../models/address_model.dart';
 
 class AddressService {
-  final Dio _dio = ApiClient.instance.dio;
+  final Dio _dio;
+
+  AddressService({Dio? dio}) : _dio = dio ?? ApiClient.instance.dio;
 
   String _extractErrorMessage(DioException e) {
     final data = e.response?.data;
@@ -25,6 +27,16 @@ class AddressService {
     }
 
     return 'Terjadi kesalahan. Periksa koneksi Anda.';
+  }
+
+  Future<List<({String code, String name})>> getRegions(String path) async {
+    final response = await _dio.get('/regions/$path');
+    return (response.data['data'] as List)
+        .map(
+          (item) =>
+              (code: item['code'].toString(), name: item['name'] as String),
+        )
+        .toList();
   }
 
   // GET: Semua alamat

@@ -1,6 +1,6 @@
 # Batik Rubung Kuning — aplikasi pelanggan
 
-Aplikasi Flutter untuk katalog, akun pelanggan, alamat, keranjang, checkout, pembayaran Midtrans, dan riwayat pesanan. Kontrak API proyek ada di [roadmap.md](roadmap.md); panduan arsitektur dan pengujian ada di [dokumentasi.md](dokumentasi.md).
+Aplikasi Flutter untuk katalog, akun pelanggan, alamat, keranjang, checkout, pembayaran Midtrans, dan riwayat pesanan. Kontrak integrasi mengikuti [referensi API backend](https://github.com/sanxnn/rubung-v3/blob/main/docs/api-reference.md). Panduan arsitektur aplikasi ada di [dokumentasi.md](dokumentasi.md).
 
 ## Persyaratan
 
@@ -15,7 +15,7 @@ Aplikasi Flutter untuk katalog, akun pelanggan, alamat, keranjang, checkout, pem
 2. Jalankan `flutter pub get`.
 3. Jalankan `flutter run --dart-define=MIDTRANS_ENV=sandbox`.
 
-File `.env` diabaikan Git tetapi dikemas sebagai Flutter asset. Jangan menaruh server key, token pengguna, atau rahasia lain di dalamnya.
+File `.env` dilacak Git dan dikemas sebagai Flutter asset. Simpan perubahan URL lokal di workspace. Jangan menaruh server key, token pengguna, atau rahasia lain di dalamnya.
 
 ## Build production
 
@@ -36,6 +36,10 @@ Konfigurasi signing Android/iOS, identitas aplikasi, ikon, dan pengujian transak
 
 Checkout mengirim `address_id`, kode voucher, dan catatan ke backend. Harga akhir, diskon, ongkir, dan status pembayaran berasal dari backend. Aplikasi membuka halaman Snap di browser perangkat dan membaca ulang detail pesanan ketika pelanggan kembali. Jika token belum tersedia, tombol pembayaran di detail pesanan meminta token melalui `POST /payments/{orderId}/snap-token`.
 
-## Batasan saat ini
+## Alur pelanggan lainnya
 
-Katalog bundling dan custom order yang tercantum di `roadmap.md` belum mempunyai layar pelanggan. Token autentikasi disimpan melalui secure storage perangkat; versi lama yang memakai `shared_preferences` dimigrasikan saat startup. Lihat [dokumentasi.md](dokumentasi.md) untuk keputusan implementasi dan risiko yang tersisa.
+Pelanggan memilih wilayah hingga desa atau kelurahan dan mengisi kode pos. Di checkout, pratinjau voucher menampilkan potongan dan subtotal setelah voucher.
+
+Detail pesanan menampilkan kurir dan resi, konfirmasi penerimaan untuk pesanan berbayar yang sudah dikirim, dan aksi refund sesuai status pesanan dan pembayaran. Riwayat pesanan menyediakan akses ke riwayat refund. Custom order mendukung lampiran, peninjauan penawaran, dan pemilihan alamat sebelum pembayaran.
+
+Token autentikasi disimpan melalui secure storage perangkat. Token dari versi lama yang memakai `shared_preferences` dimigrasikan saat startup.

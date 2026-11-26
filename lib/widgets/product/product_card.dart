@@ -29,7 +29,9 @@ class ProductCard extends StatelessWidget {
           )
         : null;
 
-    final isPreOrder = firstVariant == null || firstVariant.stock <= 0;
+    final isPreOrder = firstVariant != null && product.isPreOrder(firstVariant);
+    final canPurchase =
+        firstVariant != null && product.canPurchase(firstVariant);
 
     return GestureDetector(
       onTap: () {
@@ -100,7 +102,11 @@ class ProductCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isPreOrder ? 'Pre-Order' : 'Tersedia',
+                        isPreOrder
+                            ? 'Pre-Order'
+                            : canPurchase
+                            ? 'Tersedia'
+                            : 'Stok habis',
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
@@ -200,48 +206,53 @@ class ProductCard extends StatelessWidget {
                           shape: const CircleBorder(),
                           child: InkWell(
                             customBorder: const CircleBorder(),
-                            onTap: () async {
-                              if (firstVariant == null) return;
+                            onTap: !canPurchase
+                                ? null
+                                : () async {
+                                    final success = await context
+                                        .read<CartController>()
+                                        .addToCart(
+                                          variantId: firstVariant.id,
+                                          quantity: 1,
+                                        );
 
-                              final success = await context
-                                  .read<CartController>()
-                                  .addToCart(
-                                    product: product,
-                                    variant: firstVariant,
-                                    quantity: 1,
-                                  );
+                                    if (!context.mounted) return;
 
-                              if (!context.mounted) return;
+                                    if (success) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            '${product.name} (${firstVariant.name}) ditambahkan ke keranjang!',
+                                          ),
+                                          backgroundColor: AppTheme.primaryDark,
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    } else {
+                                      final err = context
+                                          .read<CartController>()
+                                          .errorMessage;
 
-                              if (success) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '${product.name} (${firstVariant.name}) ditambahkan ke keranjang!',
-                                    ),
-                                    backgroundColor: AppTheme.primaryDark,
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                final err = context
-                                    .read<CartController>()
-                                    .errorMessage;
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      err ?? 'Gagal menambahkan produk ke keranjang',
-                                    ),
-                                    backgroundColor: AppTheme.error,
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                              }
-                            },
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            err ?? 'Gagal menambahkan produk ke keranjang',
+                                          ),
+                                          backgroundColor: AppTheme.error,
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    }
+                                  },
                             child: const Padding(
                               padding: EdgeInsets.all(8),
                               child: Icon(

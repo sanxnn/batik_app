@@ -5,6 +5,8 @@ import '../controllers/address_controller.dart';
 import '../controllers/cart_controller.dart';
 import '../controllers/order_controller.dart';
 import '../models/order_model.dart';
+import '../core/utils/api_error.dart';
+import '../services/order_service.dart';
 import '../theme/app_theme.dart';
 import 'address_view.dart';
 import 'order_detail_view.dart';
@@ -20,6 +22,30 @@ class _CheckoutViewState extends State<CheckoutView> {
   final _voucher = TextEditingController();
   final _notes = TextEditingController();
   int? _addressId;
+  VoucherPreview? _preview;
+  String? _voucherError;
+  bool _checkingVoucher = false;
+
+  Future<bool> _checkVoucher() async {
+    final code = _voucher.text.trim();
+    final service = context.read<OrderController>().service;
+    setState(() {
+      _checkingVoucher = true;
+      _preview = null;
+      _voucherError = null;
+    });
+    try {
+      final preview = await service.validateVoucher(code);
+      if (!mounted) return false;
+      setState(() => _preview = preview);
+      return true;
+    } catch (error) {
+      if (mounted) setState(() => _voucherError = apiErrorMessage(error));
+      return false;
+    } finally {
+      if (mounted) setState(() => _checkingVoucher = false);
+    }
+  }
 
   @override
   void initState() {
@@ -51,9 +77,12 @@ class _CheckoutViewState extends State<CheckoutView> {
       return;
     }
     final controller = context.read<OrderController>();
+    if (_voucher.text.trim().isNotEmpty && _preview == null) {
+      if (!await _checkVoucher() || !mounted) return;
+    }
     final result = await controller.checkout(
       addressId: _addressId!,
-      voucherCode: _voucher.text.trim(),
+      voucherCode: _preview?.code,
       notes: _notes.text.trim(),
     );
     if (!mounted) return;
@@ -147,10 +176,33 @@ class _CheckoutViewState extends State<CheckoutView> {
             ),
           TextField(
             controller: _voucher,
+            enabled: !_checkingVoucher && !orders.isSaving,
+            onChanged: (_) => setState(() {
+              _preview = null;
+              _voucherError = null;
+            }),
             decoration: const InputDecoration(
               labelText: 'Kode voucher (opsional)',
             ),
           ),
+          TextButton(
+            onPressed:
+                _checkingVoucher ||
+                    orders.isSaving ||
+                    _voucher.text.trim().isEmpty ||
+                    cart.isEmpty
+                ? null
+                : _checkVoucher,
+            child: Text(_checkingVoucher ? 'Memeriksa...' : 'Cek voucher'),
+          ),
+          if (_voucherError != null)
+            Text(_voucherError!, style: const TextStyle(color: AppTheme.error)),
+          if (_preview case final preview?) ...[
+            Text('Potongan voucher: ${formatRupiah(preview.discount)}'),
+            Text(
+              'Subtotal setelah voucher: ${formatRupiah(preview.subtotalAfterVoucher)}',
+            ),
+          ],
           const SizedBox(height: 12),
           TextField(
             controller: _notes,
@@ -176,7 +228,8 @@ class _CheckoutViewState extends State<CheckoutView> {
           const SizedBox(height: 20),
           FilledButton(
             onPressed:
-                orders.isSaving ||
+                _checkingVoucher ||
+                    orders.isSaving ||
                     addresses.isLoading ||
                     addresses.errorMessage != null ||
                     _addressId == null ||

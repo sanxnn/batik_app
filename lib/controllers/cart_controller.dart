@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../models/cart_model.dart';
-import '../models/product_model.dart';
 import '../services/cart_service.dart';
 
 class CartController extends ChangeNotifier {
@@ -53,21 +52,25 @@ class CartController extends ChangeNotifier {
 
   // Menambahkan produk
   Future<bool> addToCart({
-    required ProductModel product,
-    required VariantModel variant,
+    required int variantId,
     required int quantity,
   }) async {
+    if (_isUpdating) return false;
+    _isUpdating = true;
     _errorMessage = null;
-
+    notifyListeners();
     try {
-      _cart = await _service.addToCart(variant: variant, quantity: quantity);
-
-      notifyListeners();
+      _cart = await _service.addToCart(
+        variantId: variantId,
+        quantity: quantity,
+      );
       return true;
-    } catch (e) {
-      _errorMessage = _getErrorMessage(e);
-      notifyListeners();
+    } catch (error) {
+      _errorMessage = _getErrorMessage(error);
       return false;
+    } finally {
+      _isUpdating = false;
+      notifyListeners();
     }
   }
 

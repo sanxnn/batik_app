@@ -107,19 +107,28 @@ class OrderController extends ChangeNotifier {
     }
   }
 
-  Future<bool> cancel(int id) async {
-    if (isSaving) return false;
+  Future<bool> cancel(int id) async =>
+      await _changeStatus(id, service.cancelOrder) != null;
+
+  Future<OrderModel?> complete(int id) =>
+      _changeStatus(id, service.completeOrder);
+
+  Future<OrderModel?> _changeStatus(
+    int id,
+    Future<OrderModel> Function(int) action,
+  ) async {
+    if (isSaving) return null;
     isSaving = true;
     errorMessage = null;
     notifyListeners();
     try {
-      final order = await service.cancelOrder(id);
+      final order = await action(id);
       final index = orders.indexWhere((item) => item.id == id);
       if (index >= 0) orders[index] = order;
-      return true;
+      return order;
     } catch (error) {
       errorMessage = apiErrorMessage(error);
-      return false;
+      return null;
     } finally {
       isSaving = false;
       notifyListeners();

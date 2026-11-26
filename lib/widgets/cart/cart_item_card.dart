@@ -92,17 +92,19 @@ class CartItemCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: item.isPreOrder
+                    color: variant.stock == 0
                         ? const Color(0xFF292929)
                         : const Color(0xFFFFF4E0),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    item.isPreOrder ? 'Pre-Order' : 'Stok: ${variant.stock}',
+                    variant.isBundle && variant.stock == 0
+                        ? 'Stok habis'
+                        : 'Stok: ${variant.stock}',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
-                      color: item.isPreOrder
+                      color: variant.stock == 0
                           ? Colors.white
                           : const Color(0xFF8A8172),
                     ),
@@ -127,6 +129,8 @@ class CartItemCard extends StatelessWidget {
                     CartQuantitySelector(
                       quantity: item.quantity,
                       stock: variant.stock,
+                      canRequestMoreWithoutStock:
+                          item.canRequestMoreWithoutStock,
                       isUpdating: isUpdating,
                       onChanged: onQuantityChanged,
                     ),
