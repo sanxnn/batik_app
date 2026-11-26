@@ -1,14 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_theme.dart';
-
 class AuthButton extends StatelessWidget {
-  final String text;
-  final VoidCallback? onPressed;
-  final bool isLoading;
-  final bool outlined;
-  final IconData? icon;
-
   const AuthButton({
     super.key,
     required this.text,
@@ -18,46 +10,36 @@ class AuthButton extends StatelessWidget {
     this.icon,
   });
 
+  final String text;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+  final bool outlined;
+  final IconData? icon;
+
   @override
   Widget build(BuildContext context) {
-    final Widget content = isLoading
-        ? const SizedBox(
-            width: 21,
-            height: 21,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.3,
-              color: AppTheme.textPrimary,
-            ),
+    final action = isLoading ? null : onPressed;
+    final content = Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        if (isLoading)
+          const SizedBox.square(
+            dimension: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
           )
-        : Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(text),
-              if (icon != null) ...[
-                const SizedBox(width: 9),
-                Icon(icon, size: 20),
-              ],
-            ],
-          );
-
-    if (outlined) {
-      return SizedBox(
-        width: double.infinity,
-        height: 54,
-        child: OutlinedButton(
-          onPressed: isLoading ? null : onPressed,
-          child: content,
-        ),
-      );
-    }
-
+        else if (icon != null)
+          Icon(icon, size: 20),
+        Text(isLoading ? 'Memproses…' : text, textAlign: TextAlign.center),
+      ],
+    );
     return SizedBox(
       width: double.infinity,
-      height: 55,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        child: content,
-      ),
+      child: outlined
+          ? OutlinedButton(onPressed: action, child: content)
+          : FilledButton(onPressed: action, child: content),
     );
   }
 }

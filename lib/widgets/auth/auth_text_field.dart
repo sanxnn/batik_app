@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_theme.dart';
+import 'package:flutter/services.dart';
 
 class AuthTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -16,6 +16,8 @@ class AuthTextField extends StatelessWidget {
   final void Function(String)? onSubmitted;
   final int? maxLength;
   final int maxLines;
+  final Iterable<String>? autofillHints;
+  final List<TextInputFormatter>? inputFormatters;
 
   const AuthTextField({
     super.key,
@@ -32,40 +34,33 @@ class AuthTextField extends StatelessWidget {
     this.onSubmitted,
     this.maxLength,
     this.maxLines = 1,
+    this.autofillHints,
+    this.inputFormatters,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppTheme.textPrimary,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 9),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          obscureText: obscureText,
-          enabled: enabled,
-          maxLength: maxLength,
-          maxLines: obscureText ? 1 : maxLines,
-          validator: validator,
-          onFieldSubmitted: onSubmitted,
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixIcon: icon == null ? null : Icon(icon),
-            suffixIcon: suffixIcon,
-            counterText: '',
-          ),
-        ),
-      ],
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      obscureText: obscureText,
+      enabled: enabled,
+      maxLength: maxLength,
+      maxLines: obscureText ? 1 : maxLines,
+      validator: validator,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      autofillHints: autofillHints,
+      inputFormatters: inputFormatters,
+      onFieldSubmitted: onSubmitted,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: icon == null ? null : Icon(icon),
+        suffixIcon: suffixIcon,
+        counterText: '',
+        errorMaxLines: 3,
+      ),
     );
   }
 }

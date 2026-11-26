@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../widgets/common/form_error.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth/auth_layout.dart';
 import '../../widgets/auth/auth_text_field.dart';
@@ -19,6 +22,7 @@ class VerifyEmailView extends StatefulWidget {
 class _VerifyEmailViewState extends State<VerifyEmailView> {
   final _otpCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  String? _submitError;
   bool _isSubmitting = false;
 
   @override
@@ -30,8 +34,11 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
   Future<void> _handleVerify() async {
     if (!_formKey.currentState!.validate() || _isSubmitting) return;
 
-    setState(() => _isSubmitting = true);
     final controller = context.read<AuthController>();
+    if (controller.isLoading) return;
+    setState(() => _isSubmitting = true);
+    FocusScope.of(context).unfocus();
+    setState(() => _submitError = null);
 
     final success = await controller.verifyEmail(
       widget.email,
@@ -51,35 +58,33 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
       // Hapus semua halaman sebelumnya dan arahkan ke login
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(controller.errorMessage ?? 'Verifikasi OTP gagal.'),
-          backgroundColor: AppTheme.error,
-        ),
+      setState(
+        () => _submitError = controller.errorMessage ?? 'Verifikasi OTP gagal.',
       );
     }
   }
 
   Future<void> _handleResend() async {
-    if (_isSubmitting) return;
-    setState(() => _isSubmitting = true);
-
     final controller = context.read<AuthController>();
+    if (_isSubmitting || controller.isLoading) return;
+    setState(() {
+      _isSubmitting = true;
+      _submitError = null;
+    });
     final success = await controller.resendOtp(widget.email);
 
     if (!mounted) return;
     setState(() => _isSubmitting = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'OTP baru berhasil dikirim.'
-              : (controller.errorMessage ?? 'Gagal mengirim ulang OTP.'),
-        ),
-        backgroundColor: success ? AppTheme.success : AppTheme.error,
-      ),
-    );
+    if (!success) {
+      setState(
+        () => _submitError =
+            controller.errorMessage ?? 'Gagal mengirim ulang OTP.',
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Kode OTP baru dikirim.')));
   }
 
   @override
@@ -87,13 +92,14 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
     return Consumer<AuthController>(
       builder: (context, controller, _) {
         return AuthLayout(
-          title: 'Verifikasi Email ✉️',
+          title: 'Verifikasi email',
           subtitle: 'Satu langkah lagi untuk mengaktifkan akunmu.',
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (_submitError case final message?) FormError(message),
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -105,7 +111,7 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
                       const Icon(
                         Icons.mark_email_read_outlined,
                         size: 48,
-                        color: AppTheme.primaryDark,
+                        color: AppTheme.accentInk,
                       ),
                       const SizedBox(height: 12),
                       const Text(
@@ -134,6 +140,8 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
                   textInputAction: TextInputAction.done,
                   enabled: !_isSubmitting && !controller.isLoading,
                   maxLength: 6,
+                  autofillHints: const [AutofillHints.oneTimeCode],
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   onSubmitted: (_) => _handleVerify(),
                   validator: (value) {
                     final otp = value?.trim() ?? '';
@@ -167,7 +175,13 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
                   child: TextButton.icon(
                     onPressed: (_isSubmitting || controller.isLoading)
                         ? null
-                        : () => Navigator.maybePop(context),
+                        : () {
+                            if (Navigator.canPop(context)) {
+                              Navigator.pop(context);
+                            } else {
+                              Navigator.pushReplacementNamed(context, '/login');
+                            }
+                          },
                     icon: const Icon(Icons.arrow_back_rounded),
                     label: const Text('Kembali'),
                     style: TextButton.styleFrom(

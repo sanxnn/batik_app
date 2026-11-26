@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../widgets/common/form_error.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth/auth_layout.dart';
 import '../../widgets/auth/auth_text_field.dart';
@@ -19,6 +22,7 @@ class ResetPasswordOtpView extends StatefulWidget {
 class _ResetPasswordOtpViewState extends State<ResetPasswordOtpView> {
   final _otpCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  String? _submitError;
   bool _isSubmitting = false;
 
   @override
@@ -30,8 +34,11 @@ class _ResetPasswordOtpViewState extends State<ResetPasswordOtpView> {
   Future<void> _handleVerify() async {
     if (!_formKey.currentState!.validate() || _isSubmitting) return;
 
-    setState(() => _isSubmitting = true);
     final controller = context.read<AuthController>();
+    if (controller.isLoading) return;
+    setState(() => _isSubmitting = true);
+    FocusScope.of(context).unfocus();
+    setState(() => _submitError = null);
 
     final resetToken = await controller.verifyPasswordResetOtp(
       widget.email,
@@ -48,35 +55,33 @@ class _ResetPasswordOtpViewState extends State<ResetPasswordOtpView> {
         arguments: {'email': widget.email, 'resetToken': resetToken},
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(controller.errorMessage ?? 'Verifikasi OTP gagal.'),
-          backgroundColor: AppTheme.error,
-        ),
+      setState(
+        () => _submitError = controller.errorMessage ?? 'Verifikasi OTP gagal.',
       );
     }
   }
 
   Future<void> _handleResend() async {
-    if (_isSubmitting) return;
-    setState(() => _isSubmitting = true);
-
     final controller = context.read<AuthController>();
+    if (_isSubmitting || controller.isLoading) return;
+    setState(() {
+      _isSubmitting = true;
+      _submitError = null;
+    });
     final success = await controller.forgotPassword(widget.email);
 
     if (!mounted) return;
     setState(() => _isSubmitting = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'OTP baru berhasil dikirim.'
-              : (controller.errorMessage ?? 'Gagal mengirim ulang OTP.'),
-        ),
-        backgroundColor: success ? AppTheme.success : AppTheme.error,
-      ),
-    );
+    if (!success) {
+      setState(
+        () => _submitError =
+            controller.errorMessage ?? 'Gagal mengirim ulang OTP.',
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Kode OTP baru dikirim.')));
   }
 
   @override
@@ -92,6 +97,7 @@ class _ResetPasswordOtpViewState extends State<ResetPasswordOtpView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (_submitError case final message?) FormError(message),
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -103,7 +109,7 @@ class _ResetPasswordOtpViewState extends State<ResetPasswordOtpView> {
                       const Icon(
                         Icons.lock_reset_rounded,
                         size: 48,
-                        color: AppTheme.primaryDark,
+                        color: AppTheme.accentInk,
                       ),
                       const SizedBox(height: 12),
                       const Text(
@@ -132,6 +138,8 @@ class _ResetPasswordOtpViewState extends State<ResetPasswordOtpView> {
                   textInputAction: TextInputAction.done,
                   enabled: !_isSubmitting && !controller.isLoading,
                   maxLength: 6,
+                  autofillHints: const [AutofillHints.oneTimeCode],
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   onSubmitted: (_) => _handleVerify(),
                   validator: (value) {
                     final otp = value?.trim() ?? '';

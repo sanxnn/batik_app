@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
-import '../../theme/app_theme.dart';
+import '../../widgets/common/form_error.dart';
+import '../../widgets/auth/birth_date_field.dart';
 import '../../widgets/auth/auth_layout.dart';
 import '../../widgets/auth/auth_text_field.dart';
 import '../../widgets/auth/auth_button.dart';
@@ -16,6 +17,7 @@ class RegisterView extends StatefulWidget {
 
 class _RegisterViewState extends State<RegisterView> {
   final _formKey = GlobalKey<FormState>();
+  String? _submitError;
 
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -39,55 +41,12 @@ class _RegisterViewState extends State<RegisterView> {
     super.dispose();
   }
 
-  Future<void> _pickBirthDate() async {
-    final now = DateTime.now();
-
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _birthDate ?? DateTime(now.year - 17, now.month, now.day),
-      firstDate: DateTime(1900),
-      lastDate: DateTime(now.year - 13, now.month, now.day),
-      helpText: 'Pilih tanggal lahir',
-      cancelText: 'Batal',
-      confirmText: 'Pilih',
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppTheme.primary,
-              onPrimary: AppTheme.textPrimary,
-              surface: Colors.white,
-              onSurface: AppTheme.textPrimary,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() => _birthDate = picked);
-    }
-  }
-
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
-
-    if (_birthDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tanggal lahir wajib diisi')),
-      );
-      return;
-    }
-
-    if (_passwordCtrl.text != _confirmPasswordCtrl.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Konfirmasi password tidak cocok')),
-      );
-      return;
-    }
-
     final controller = context.read<AuthController>();
+    if (controller.isLoading) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _submitError = null);
 
     final success = await controller.register(
       name: _nameCtrl.text.trim(),
@@ -108,364 +67,134 @@ class _RegisterViewState extends State<RegisterView> {
         arguments: _emailCtrl.text.trim(),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(controller.errorMessage ?? 'Registrasi gagal'),
-          backgroundColor: AppTheme.error,
-        ),
+      setState(
+        () => _submitError = controller.errorMessage ?? 'Registrasi gagal',
       );
     }
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/'
-        '${date.month.toString().padLeft(2, '0')}/'
-        '${date.year}';
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthController>(
-      builder: (context, controller, _) {
-        return AuthLayout(
-          title: 'Buat akun baru',
-          subtitle:
-              'Bergabunglah dengan Batik Rubung Kuning '
-              'dan temukan cerita di setiap karya.',
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Nama lengkap
-                AuthTextField(
-                  controller: _nameCtrl,
-                  label: 'Nama lengkap',
-                  hint: 'Masukkan nama lengkap',
-                  icon: Icons.person_outline_rounded,
-                  textInputAction: TextInputAction.next,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Nama wajib diisi';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Email
-                AuthTextField(
-                  controller: _emailCtrl,
-                  label: 'Alamat email',
-                  hint: 'nama@email.com',
-                  icon: Icons.alternate_email_rounded,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Email wajib diisi';
-                    }
-
-                    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                        .hasMatch(value.trim())) {
-                      return 'Format email tidak valid';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Nomor telepon opsional
-                AuthTextField(
-                  controller: _phoneCtrl,
-                  label: 'Nomor HP',
-                  hint: '08xxxxxxxxxx (opsional)',
-                  icon: Icons.phone_outlined,
-                  keyboardType: TextInputType.phone,
-                ),
-
-                const SizedBox(height: 20),
-
-                // Jenis kelamin
-                const Text(
-                  'Jenis kelamin',
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-
-                const SizedBox(height: 9),
-
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surface,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                    border: Border.all(color: AppTheme.border),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _gender,
-                      isExpanded: true,
-                      borderRadius: BorderRadius.circular(16),
-                      icon: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: AppTheme.textSecondary,
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Male',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.male_rounded,
-                                color: AppTheme.textSecondary,
-                                size: 21,
-                              ),
-                              SizedBox(width: 12),
-                              Text('Laki-laki'),
-                            ],
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Female',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.female_rounded,
-                                color: AppTheme.textSecondary,
-                                size: 21,
-                              ),
-                              SizedBox(width: 12),
-                              Text('Perempuan'),
-                            ],
-                          ),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _gender = value);
-                        }
-                      },
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Tanggal lahir
-                const Text(
-                  'Tanggal lahir',
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-
-                const SizedBox(height: 9),
-
-                Material(
-                  color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                  child: InkWell(
-                    onTap: _pickBirthDate,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 18,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(
-                          AppTheme.radiusMedium,
-                        ),
-                        border: Border.all(color: AppTheme.border),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.calendar_month_outlined,
-                            color: AppTheme.textSecondary,
-                            size: 21,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _birthDate == null
-                                  ? 'Pilih tanggal lahir'
-                                  : _formatDate(_birthDate!),
-                              style: TextStyle(
-                                color: _birthDate == null
-                                    ? AppTheme.textHint
-                                    : AppTheme.textPrimary,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Password
-                AuthTextField(
-                  controller: _passwordCtrl,
-                  label: 'Password',
-                  hint: 'Minimal 8 karakter',
-                  icon: Icons.lock_outline_rounded,
-                  obscureText: _obscurePassword,
-                  suffixIcon: IconButton(
-                    tooltip: _obscurePassword
-                        ? 'Tampilkan password'
-                        : 'Sembunyikan password',
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                      color: AppTheme.textSecondary,
-                      size: 21,
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.length < 8) {
-                      return 'Password minimal 8 karakter';
-                    }
-
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Konfirmasi password
-                AuthTextField(
-                  controller: _confirmPasswordCtrl,
-                  label: 'Konfirmasi password',
-                  hint: 'Masukkan ulang password',
-                  icon: Icons.lock_reset_rounded,
-                  obscureText: _obscureConfirmPassword,
-                  textInputAction: TextInputAction.done,
-                  suffixIcon: IconButton(
-                    tooltip: _obscureConfirmPassword
-                        ? 'Tampilkan password'
-                        : 'Sembunyikan password',
-                    onPressed: () {
-                      setState(() {
-                        _obscureConfirmPassword = !_obscureConfirmPassword;
-                      });
-                    },
-                    icon: Icon(
-                      _obscureConfirmPassword
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                      color: AppTheme.textSecondary,
-                      size: 21,
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Konfirmasi password wajib diisi';
-                    }
-
-                    if (value.length < 8) {
-                      return 'Password minimal 8 karakter';
-                    }
-
-                    if (value != _passwordCtrl.text) {
-                      return 'Password tidak cocok';
-                    }
-
-                    return null;
-                  },
-                  onSubmitted: (_) {
-                    if (!controller.isLoading) {
-                      _handleRegister();
-                    }
-                  },
-                ),
-
-                const SizedBox(height: 28),
-
-                // Tombol daftar global
-                AuthButton(
-                  text: 'Buat Akun',
-                  icon: Icons.arrow_forward_rounded,
-                  isLoading: controller.isLoading,
-                  onPressed: _handleRegister,
-                ),
-
-                const SizedBox(height: 24),
-
-                // Navigasi login
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Flexible(
-                      child: Text(
-                        'Sudah punya akun?',
-                        style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/login');
-                      },
-                      child: const Text('Masuk'),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 8),
-
-                const Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.verified_user_outlined,
-                        color: AppTheme.textSecondary,
-                        size: 15,
-                      ),
-                      SizedBox(width: 7),
-                      Flexible(
-                        child: Text(
-                          'Data kamu diproses dengan aman',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppTheme.textSecondary,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    final busy = context.watch<AuthController>().isLoading;
+    return AuthLayout(
+      title: 'Buat akun',
+      subtitle: 'Lengkapi data untuk berbelanja dan melacak pesanan.',
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_submitError case final message?) FormError(message),
+            AuthTextField(
+              controller: _nameCtrl,
+              label: 'Nama lengkap',
+              hint: 'Sesuai identitas',
+              enabled: !busy,
+              autofillHints: const [AutofillHints.name],
+              validator: (value) =>
+                  value?.trim().isNotEmpty == true ? null : 'Nama wajib diisi',
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 16),
+            AuthTextField(
+              controller: _emailCtrl,
+              label: 'Email',
+              hint: 'nama@email.com',
+              enabled: !busy,
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.email],
+              validator: (value) =>
+                  RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                      .hasMatch(value?.trim() ?? '')
+                  ? null
+                  : 'Masukkan email yang valid',
+            ),
+            const SizedBox(height: 16),
+            AuthTextField(
+              controller: _phoneCtrl,
+              label: 'Nomor telepon (opsional)',
+              hint: '081234567890',
+              enabled: !busy,
+              keyboardType: TextInputType.phone,
+              autofillHints: const [AutofillHints.telephoneNumber],
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _gender,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Jenis kelamin'),
+              items: const [
+                DropdownMenuItem(value: 'Male', child: Text('Laki-laki')),
+                DropdownMenuItem(value: 'Female', child: Text('Perempuan')),
+              ],
+              onChanged: busy
+                  ? null
+                  : (value) {
+                      if (value != null) setState(() => _gender = value);
+                    },
+            ),
+            const SizedBox(height: 16),
+            BirthDateField(
+              value: _birthDate,
+              enabled: !busy,
+              onChanged: (value) => setState(() => _birthDate = value),
+            ),
+            const SizedBox(height: 16),
+            AuthTextField(
+              controller: _passwordCtrl,
+              label: 'Kata sandi',
+              hint: 'Minimal 8 karakter',
+              enabled: !busy,
+              obscureText: _obscurePassword,
+              autofillHints: const [AutofillHints.newPassword],
+              suffixIcon: _visibility(
+                _obscurePassword,
+                () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+              validator: (value) => (value?.length ?? 0) < 8
+                  ? 'Gunakan minimal 8 karakter'
+                  : null,
+            ),
+            const SizedBox(height: 16),
+            AuthTextField(
+              controller: _confirmPasswordCtrl,
+              label: 'Konfirmasi kata sandi',
+              hint: 'Ulangi kata sandi',
+              enabled: !busy,
+              obscureText: _obscureConfirmPassword,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _handleRegister(),
+              suffixIcon: _visibility(
+                _obscureConfirmPassword,
+                () => setState(
+                  () => _obscureConfirmPassword = !_obscureConfirmPassword,
+                ),
+              ),
+              validator: (value) =>
+                  value == _passwordCtrl.text ? null : 'Kata sandi tidak cocok',
+            ),
+            const SizedBox(height: 20),
+            AuthButton(
+              text: 'Buat akun',
+              onPressed: _handleRegister,
+              isLoading: busy,
+            ),
+            TextButton(
+              onPressed: busy
+                  ? null
+                  : () => Navigator.pushReplacementNamed(context, '/login'),
+              child: const Text('Sudah punya akun? Masuk'),
+            ),
+          ],
+        ),
+      ),
     );
   }
+
+  Widget _visibility(bool hidden, VoidCallback toggle) => IconButton(
+    tooltip: hidden ? 'Tampilkan kata sandi' : 'Sembunyikan kata sandi',
+    onPressed: toggle,
+    icon: Icon(
+      hidden ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+    ),
+  );
 }
