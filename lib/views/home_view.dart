@@ -3,15 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'cart_view.dart';
-import 'bundle_detail_view.dart';
-import '../controllers/product_controller.dart';
 import '../controllers/bundle_controller.dart';
-import '../models/bundle_model.dart';
+import '../controllers/product_controller.dart';
+import '../models/category_model.dart';
 import '../models/order_model.dart';
-import '../theme/app_theme.dart';
+import '../widgets/catalog/catalog_image.dart';
+import '../widgets/common/content_state.dart';
 import '../widgets/home/home_search_bar.dart';
 import '../widgets/product/product_card.dart';
+import 'bundle_detail_view.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -21,804 +21,389 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  final TextEditingController _searchCtrl = TextEditingController();
-
-  final PageController _bannerPageController = PageController();
-
+  final _search = TextEditingController();
+  final _banner = PageController();
   Timer? _debounce;
-  Timer? _bannerTimer;
+  int _bannerIndex = 0;
+  bool _initialLoading = true;
 
-  int _currentBannerIndex = 0;
-
-  // DATA BANNER SLIDESHOW
-  static const List<String> _banners = [
+  static const _banners = [
     'assets/images/rubung_banner_batik_1.jpeg',
     'assets/images/rubung_banner_batik_2.jpeg',
     'assets/images/rubung_banner_batik_3.jpeg',
     'assets/images/rubung_banner_batik_4.jpeg',
   ];
 
-  static const Color _textDark = Color(0xFF252525);
-  static const Color _textGrey = Color(0xFF888888);
-  static const Color _divider = Color(0xFFEAEAEA);
-
   @override
   void initState() {
     super.initState();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      context.read<ProductController>().fetchInitialData();
-      context.read<BundleController>().load(refresh: true);
+      if (mounted) _refresh();
     });
+  }
 
-    // SLIDESHOW OTOMATIS SETIAP 4 DETIK
-    _bannerTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (!mounted || !_bannerPageController.hasClients) return;
-
-      final nextPage = (_currentBannerIndex + 1) % _banners.length;
-
-      _bannerPageController.animateToPage(
-        nextPage,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    });
+  Future<void> _refresh() async {
+    _debounce?.cancel();
+    final products = context.read<ProductController>();
+    final bundles = context.read<BundleController>();
+    try {
+      await Future.wait([
+        products.fetchInitialData(),
+        bundles.load(refresh: true),
+      ]);
+    } finally {
+      if (mounted && _initialLoading) setState(() => _initialLoading = false);
+    }
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
-    _bannerTimer?.cancel();
-
-    _searchCtrl.dispose();
-    _bannerPageController.dispose();
-
+    _search.dispose();
+    _banner.dispose();
     super.dispose();
   }
 
-  // ==========================================
-  // BANNER SLIDESHOW
-  // ==========================================
-
-  Widget _buildBannerSlider() {
-    return Column(
-      children: [
-        SizedBox(
-          height: 145,
-          width: double.infinity,
-          child: PageView.builder(
-            controller: _bannerPageController,
-            itemCount: _banners.length,
-
-            onPageChanged: (index) {
-              setState(() {
-                _currentBannerIndex = index;
-              });
-            },
-
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-
-                  child: Image.asset(
-                    _banners[index],
-                    width: double.infinity,
-                    height: 145,
-                    fit: BoxFit.cover,
-
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: const Color(0xFFFFE7A3),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.image_not_supported_outlined,
-                          color: Color(0xFF8B5A00),
-                          size: 32,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // INDIKATOR SLIDESHOW
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_banners.length, (index) {
-            final isActive = _currentBannerIndex == index;
-
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-
-              width: isActive ? 22 : 7,
-              height: 7,
-
-              decoration: BoxDecoration(
-                color: isActive
-                    ? AppTheme.primaryDark
-                    : const Color(0xFFD8D8D8),
-
-                borderRadius: BorderRadius.circular(10),
-              ),
-            );
-          }),
-        ),
-      ],
-    );
-  }
-
-  // ==========================================
-  // SEARCH DENGAN DEBOUNCE
-  // ==========================================
-
-  void _onSearchChanged(String query) {
+  void _submit(String value) {
     _debounce?.cancel();
-
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      if (!mounted) return;
-
-      context.read<ProductController>().searchProducts(query);
-    });
+    final query = value.trim();
+    final products = context.read<ProductController>();
+    final category = products.categories
+        .where((item) => item.id == products.selectedCategoryId)
+        .firstOrNull;
+    if (category == null || category.slug == 'bundling') {
+      context.read<BundleController>().search(query);
+    }
+    products.searchProducts(query);
   }
 
-  // SEARCH SAAT TOMBOL KEYBOARD DITEKAN
-  void _onSearchSubmitted(String query) {
+  void _select(CategoryModel? category) {
     _debounce?.cancel();
-
-    context.read<ProductController>().searchProducts(query);
-  }
-
-  // RESET SEARCH DAN KATEGORI
-  void _resetFilters() {
-    _debounce?.cancel();
-    _searchCtrl.clear();
-
-    context.read<ProductController>().resetFilters();
-  }
-
-  // NAVIGASI KERANJANG
-  void _openCart() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const CartView()),
-    );
+    _search.clear();
+    context.read<BundleController>().search('');
+    final controller = context.read<ProductController>();
+    if (category == null) {
+      controller.resetFilters();
+    } else {
+      controller.selectCategory(category.id);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final products = context.watch<ProductController>();
+    final bundles = context.watch<BundleController>();
+    final category = products.categories
+        .where((item) => item.id == products.selectedCategoryId)
+        .firstOrNull;
+    final showBundles =
+        category?.slug == 'bundling' ||
+        (category == null &&
+            (products.searchQuery.isEmpty ||
+                bundles.bundles.isNotEmpty ||
+                bundles.isLoading ||
+                bundles.errorMessage != null));
+    final bundleOnly = category?.slug == 'bundling';
+    final theme = Theme.of(context);
+    final loadingProducts = products.isLoading || _initialLoading;
+    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
     return Scaffold(
-      backgroundColor: AppTheme.background,
-
-      body: Consumer<ProductController>(
-        builder: (context, prodCtrl, _) {
-          final isInitialLoading =
-              prodCtrl.isLoading && prodCtrl.products.isEmpty;
-
-          return CustomScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-
-            slivers: [
-              // ==========================================
-              // 1. APP BAR
-              // ==========================================
-              SliverToBoxAdapter(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF3B2A1A),
-                    borderRadius: BorderRadius.vertical(
-                      bottom: Radius.circular(24),
+      appBar: AppBar(title: const Text('Batik Rubung Kuning')),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: CustomScrollView(
+          key: const PageStorageKey('catalog-scroll'),
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    HomeSearchBar(
+                      controller: _search,
+                      onChanged: (query) {
+                        _debounce?.cancel();
+                        _debounce = Timer(
+                          const Duration(milliseconds: 350),
+                          () => _submit(query),
+                        );
+                      },
+                      onSubmitted: _submit,
                     ),
-                  ),
-                  child: SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
                         children: [
-                          // HEADER TOKO
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Rubung Batik Kuning',
-                                    style: TextStyle(
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  SizedBox(height: 3),
-                                  Text(
-                                    'Lestari dalam Gaya',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFFE8D5BE),
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              IconButton(
-                                onPressed: _openCart,
-                                style: IconButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: const Color(0xFF3B2A1A),
-                                  fixedSize: const Size(44, 44),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(13),
-                                  ),
-                                ),
-                                icon: const Icon(
-                                  Icons.shopping_bag_outlined,
-                                  size: 21,
-                                ),
-                              ),
-                            ],
+                          _filter(
+                            'Semua',
+                            category == null,
+                            () => _select(null),
                           ),
-
-                          const SizedBox(height: 20),
-
-                          // SEARCH BAR
-                          HomeSearchBar(
-                            controller: _searchCtrl,
-                            onChanged: _onSearchChanged,
-                            onSubmitted: _onSearchSubmitted,
-                          ),
+                          for (final item in products.categories)
+                            _filter(
+                              item.name,
+                              category?.id == item.id,
+                              () => _select(item),
+                            ),
                         ],
                       ),
+                    ),
+                    if (category == null && products.searchQuery.isEmpty) ...[
+                      const SizedBox(height: 16),
+                      _bannerSection(context),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            if (!bundleOnly) ...[
+              SliverToBoxAdapter(
+                child: _heading(
+                  context,
+                  products.searchQuery.isNotEmpty
+                      ? 'Hasil pencarian produk'
+                      : (category?.name ?? 'Katalog'),
+                ),
+              ),
+              if (products.products.isEmpty && loadingProducts)
+                SliverToBoxAdapter(
+                  child: Semantics(liveRegion: true, label: 'Memuat produk'),
+                ),
+              if (products.products.isEmpty && !loadingProducts)
+                SliverToBoxAdapter(
+                  child: ContentState(
+                    icon: products.errorMessage == null
+                        ? Icons.search_off_rounded
+                        : Icons.sync_problem_rounded,
+                    message:
+                        products.errorMessage ??
+                        'Produk reguler tidak ditemukan.',
+                    onRetry: products.errorMessage == null ? null : _refresh,
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverGrid(
+                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: textScale > 1.45 ? 440 : 235,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      mainAxisExtent:
+                          272 + 100 * (textScale - 1).clamp(0, 2).toDouble(),
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (_, index) => products.products.isEmpty
+                          ? const _CatalogSkeleton()
+                          : ProductCard(product: products.products[index]),
+                      childCount: products.products.isEmpty
+                          ? 4
+                          : products.products.length,
+                      semanticIndexCallback: (_, index) =>
+                          products.products.isEmpty ? null : index,
                     ),
                   ),
                 ),
-              ),
-              // ==========================================
-              // 2. HEADER, SEARCH, DAN BANNER
-              // ==========================================
+              if (products.products.isNotEmpty &&
+                  (products.isLoading || products.canLoadMore))
+                SliverToBoxAdapter(
+                  child: Center(
+                    child: products.isLoading
+                        ? const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: CircularProgressIndicator(
+                              semanticsLabel: 'Memuat produk lainnya',
+                            ),
+                          )
+                        : TextButton(
+                            onPressed: products.canLoadMore
+                                ? products.loadMore
+                                : null,
+                            child: Text(
+                              products.errorMessage != null
+                                  ? 'Coba muat lagi'
+                                  : 'Muat produk lainnya',
+                            ),
+                          ),
+                  ),
+                ),
+            ],
+            if (showBundles)
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ==================================
-                      // KATEGORI PRODUK
-                      // ==================================
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Kategori',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              color: _textDark,
-                            ),
-                          ),
-
-                          if (prodCtrl.selectedCategoryId != null)
-                            GestureDetector(
-                              onTap: _resetFilters,
-                              child: const Text(
-                                'Reset',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color.from(
-                                    alpha: 1,
-                                    red: 0.898,
-                                    green: 0.678,
-                                    blue: 0.071,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 17),
-
-                      // KATEGORI IKON LINGKARAN
-                      SizedBox(
-                        height: 100,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: prodCtrl.categories.length + 1,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(width: 19),
-
-                          itemBuilder: (context, index) {
-                            final isAll = index == 0;
-
-                            final category = isAll
+                      Text('Paket bundling', style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 12),
+                      if (bundles.bundles.isEmpty)
+                        if (bundles.isLoading)
+                          const ContentLoading(label: 'Memuat paket')
+                        else
+                          ContentState(
+                            icon: bundles.errorMessage == null
+                                ? Icons.inventory_2_outlined
+                                : Icons.sync_problem_rounded,
+                            message: bundles.errorMessage ?? 'Belum ada paket.',
+                            onRetry: bundles.errorMessage == null
                                 ? null
-                                : prodCtrl.categories[index - 1];
-
-                            final String categoryName = isAll
-                                ? 'Semua'
-                                : category!.name;
-
-                            final bool isSelected = isAll
-                                ? prodCtrl.selectedCategoryId == null
-                                : prodCtrl.selectedCategoryId == category!.id;
-
-                            // IKON BERDASARKAN NAMA KATEGORI
-                            IconData categoryIcon;
-
-                            if (isAll) {
-                              categoryIcon = Icons.grid_view_rounded;
-                            } else if (categoryName.toLowerCase().contains(
-                                  'bahan',
-                                ) ||
-                                categoryName.toLowerCase().contains('kain')) {
-                              categoryIcon = Icons.layers_outlined;
-                            } else if (categoryName.toLowerCase().contains(
-                              'batik',
-                            )) {
-                              categoryIcon = Icons.checkroom_outlined;
-                            } else if (categoryName.toLowerCase().contains(
-                              'bundling',
-                            )) {
-                              categoryIcon = Icons.inventory_2_outlined;
-                            } else {
-                              categoryIcon = Icons.category_outlined;
-                            }
-
-                            return GestureDetector(
-                              onTap: () {
-                                if (isAll) {
-                                  prodCtrl.selectCategory(null);
-                                } else {
-                                  prodCtrl.selectCategory(category!.id);
-                                }
-                              },
-                              child: SizedBox(
-                                width: 65,
-                                child: Column(
-                                  children: [
-                                    AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 200,
-                                      ),
-                                      width: 55,
-                                      height: 55,
-                                      decoration: BoxDecoration(
-                                        color: isSelected
-                                            ? const Color(0xFFF29A0C)
-                                            : const Color(0xFFF5EFE8),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: isSelected
-                                              ? const Color(0xFFF29A0C)
-                                              : const Color(0xFFE9DFD3),
-                                        ),
-                                      ),
-                                      child: Icon(
-                                        categoryIcon,
-                                        size: 25,
-                                        color: isSelected
-                                            ? Colors.white
-                                            : const Color(0xFF704322),
-                                      ),
-                                    ),
-
-                                    const SizedBox(height: 8),
-
-                                    Text(
-                                      categoryName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w700
-                                            : FontWeight.w500,
-                                        color: isSelected
-                                            ? const Color(0xFF8B5700)
-                                            : _textGrey,
-                                      ),
-                                    ),
-                                  ],
+                                : () => bundles.load(refresh: true),
+                          ),
+                      for (final bundle in bundles.bundles)
+                        Card(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(10),
+                            leading: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: SizedBox.square(
+                                dimension: 52,
+                                child: CatalogImage(
+                                  url: bundle.imageUrl,
+                                  label: bundle.name,
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
-
-                      const SizedBox(height: 22),
-
-                      // ==================================
-                      // BANNER SLIDESHOW
-                      // ==================================
-                      _buildBannerSlider(),
-
-                      const SizedBox(height: 27),
-
-                      // ==================================
-                      // HEADER PRODUK
-                      // ==================================
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              prodCtrl.searchQuery.isNotEmpty
-                                  ? 'Hasil Pencarian'
-                                  : prodCtrl.selectedCategoryId != null
-                                  ? 'Produk Kategori'
-                                  : 'Rekomendasi Untukmu',
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                color: _textDark,
+                            ),
+                            title: Text(bundle.name),
+                            subtitle: bundle.variants.isEmpty
+                                ? null
+                                : Text(
+                                    'Mulai ${formatRupiah(bundle.variants.map((v) => v.price).reduce((a, b) => a < b ? a : b))}',
+                                  ),
+                            trailing: const Icon(Icons.chevron_right_rounded),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) =>
+                                    BundleDetailView(bundleId: bundle.id),
                               ),
                             ),
                           ),
-
-                          if (prodCtrl.searchQuery.isNotEmpty ||
-                              prodCtrl.selectedCategoryId != null)
-                            GestureDetector(
-                              onTap: _resetFilters,
-                              child: const Text(
-                                'Hapus filter',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: _textGrey,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      Text(
-                        '${prodCtrl.products.length} produk ditemukan',
-                        style: const TextStyle(fontSize: 12, color: _textGrey),
-                      ),
-
-                      const SizedBox(height: 15),
+                        ),
+                      if (bundles.bundles.isNotEmpty && bundles.isLoading)
+                        const ContentLoading(label: 'Memuat paket lainnya'),
+                      if (bundles.bundles.isNotEmpty && bundles.canLoadMore)
+                        TextButton(
+                          onPressed: () => bundles.load(),
+                          child: Text(
+                            bundles.errorMessage != null
+                                ? 'Coba muat lagi'
+                                : 'Muat paket lainnya',
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ),
-
-              // ==========================================
-              // 5. PROGRESS INDIKATOR
-              // ==========================================
-              if (prodCtrl.isLoading && !isInitialLoading)
-                const SliverToBoxAdapter(
-                  child: LinearProgressIndicator(
-                    minHeight: 2,
-                    backgroundColor: Colors.transparent,
-                    color: AppTheme.primaryDark,
-                  ),
-                ),
-
-              // ==========================================
-              // 6. INITIAL LOADING
-              // ==========================================
-              if (isInitialLoading)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: AppTheme.primaryDark,
-                      strokeWidth: 2.5,
-                    ),
-                  ),
-                )
-              // ==========================================
-              // 7. ERROR STATE
-              // ==========================================
-              else if (prodCtrl.errorMessage != null &&
-                  prodCtrl.products.isEmpty)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-
-                  child: _buildMessageState(
-                    icon: Icons.cloud_off_outlined,
-                    title: 'Gagal Memuat Produk',
-                    description: prodCtrl.errorMessage!,
-                    buttonText: 'Coba Lagi',
-
-                    onPressed: () {
-                      context.read<ProductController>().fetchInitialData();
-                    },
-                  ),
-                )
-              // ==========================================
-              // 8. EMPTY STATE
-              // ==========================================
-              else if (prodCtrl.products.isEmpty && !prodCtrl.isLoading)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-
-                  child: _buildMessageState(
-                    icon: Icons.search_off_rounded,
-                    title: 'Produk Tidak Ditemukan',
-
-                    description: prodCtrl.searchQuery.isNotEmpty
-                        ? 'Coba kata kunci lain atau periksa ejaan pencarianmu.'
-                        : 'Belum ada produk pada kategori ini.',
-
-                    buttonText: 'Lihat Semua Produk',
-
-                    onPressed: _resetFilters,
-                  ),
-                )
-              // ==========================================
-              // 9. PRODUCT GRID
-              // ==========================================
-              else if (prodCtrl.products.isNotEmpty)
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 14,
-                          childAspectRatio: 0.68,
-                        ),
-
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      return ProductCard(product: prodCtrl.products[index]);
-                    }, childCount: prodCtrl.products.length),
-                  ),
-                ),
-              if (prodCtrl.products.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
-                    child: _buildLoadMoreButton(prodCtrl),
-                  ),
-                ),
-              SliverToBoxAdapter(
-                child: Consumer<BundleController>(
-                  builder: (context, bundleCtrl, _) {
-                    if (bundleCtrl.bundles.isEmpty && !bundleCtrl.isLoading) {
-                      return const SizedBox.shrink();
-                    }
-                    return _buildBundleSection(bundleCtrl);
-                  },
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  // ==========================================
-  // EMPTY STATE DAN ERROR STATE
-  // ==========================================
-
-  Widget _buildMessageState({
-    required IconData icon,
-    required String title,
-    required String description,
-    required String buttonText,
-    required VoidCallback onPressed,
-  }) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 30),
-
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-
-          children: [
-            Container(
-              width: 76,
-              height: 76,
-
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: _divider),
-              ),
-
-              child: Icon(icon, size: 34, color: _textGrey),
-            ),
-
-            const SizedBox(height: 20),
-
-            Text(
-              title,
-              textAlign: TextAlign.center,
-
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: _textDark,
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            Text(
-              description,
-              textAlign: TextAlign.center,
-
-              style: const TextStyle(
-                fontSize: 13,
-                height: 1.5,
-                color: _textGrey,
-              ),
-            ),
-
-            const SizedBox(height: 22),
-
-            SizedBox(
-              height: 44,
-
-              child: ElevatedButton(
-                onPressed: onPressed,
-
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryDark,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-
-                  padding: const EdgeInsets.symmetric(horizontal: 22),
-
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-
-                child: Text(
-                  buttonText,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
+            SliverToBoxAdapter(child: SizedBox(height: 16)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBundleSection(BundleController controller) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Paket Bundling',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-              color: _textDark,
+  Widget _heading(BuildContext context, String title) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+    child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+  );
+
+  Widget _filter(String label, bool selected, VoidCallback onTap) => Padding(
+    padding: const EdgeInsets.only(right: 8),
+    child: ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onTap(),
+    ),
+  );
+
+  Widget _bannerSection(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final single = reduceMotion || constraints.maxWidth < 320;
+        Widget photo(int index) => Image.asset(
+          _banners[index],
+          fit: BoxFit.contain,
+          semanticLabel: 'Koleksi Batik Rubung Kuning, gambar ${index + 1}',
+        );
+        return Column(
+          children: [
+            AspectRatio(
+              aspectRatio: 2.28,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: single
+                    ? photo(0)
+                    : PageView.builder(
+                        controller: _banner,
+                        itemCount: _banners.length,
+                        onPageChanged: (index) =>
+                            setState(() => _bannerIndex = index),
+                        itemBuilder: (_, index) => photo(index),
+                      ),
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Pilihan hemat untukmu',
-            style: TextStyle(fontSize: 12, color: _textGrey),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 190,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: controller.bundles.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final bundle = controller.bundles[index];
-                final BundleVariantModel? variant = bundle.variants.isEmpty
-                    ? null
-                    : bundle.variants.first;
-                return SizedBox(
-                  width: 170,
-                  child: Card(
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => BundleDetailView(bundleId: bundle.id),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: bundle.imageUrl.isEmpty
-                                ? Container(
-                                    color: const Color(0xFFF4EAD5),
-                                    child: const Center(
-                                      child: Icon(Icons.inventory_2_outlined),
-                                    ),
-                                  )
-                                : Image.network(
-                                    bundle.imageUrl,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) => Container(
-                                      color: const Color(0xFFF4EAD5),
-                                      child: const Icon(
-                                        Icons.inventory_2_outlined,
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(10, 8, 10, 2),
-                            child: Text(
-                              bundle.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-                            child: Text(
-                              variant == null
-                                  ? 'Detail tersedia'
-                                  : formatRupiah(variant.price),
-                              style: const TextStyle(
-                                color: Color(0xFFE6A000),
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+            if (!single)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    tooltip: 'Banner sebelumnya',
+                    onPressed: _bannerIndex == 0 ? null : () => _moveBanner(-1),
+                    icon: const Icon(Icons.chevron_left_rounded),
                   ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+                  Text('${_bannerIndex + 1} / ${_banners.length}'),
+                  IconButton(
+                    tooltip: 'Banner berikutnya',
+                    onPressed: _bannerIndex == _banners.length - 1
+                        ? null
+                        : () => _moveBanner(1),
+                    icon: const Icon(Icons.chevron_right_rounded),
+                  ),
+                ],
+              ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildLoadMoreButton(ProductController controller) {
-    if (controller.errorMessage != null) {
-      return TextButton(
-        onPressed: controller.loadMore,
-        child: Text('${controller.errorMessage} — Coba lagi'),
-      );
-    }
-    if (controller.canLoadMore) {
-      return OutlinedButton(
-        onPressed: controller.loadMore,
-        child: const Text('Muat produk lainnya'),
-      );
-    }
-    return const SizedBox.shrink();
+  void _moveBanner(int offset) => _banner.animateToPage(
+    (_bannerIndex + offset).clamp(0, _banners.length - 1),
+    duration: const Duration(milliseconds: 200),
+    curve: Curves.easeOut,
+  );
+}
+
+class _CatalogSkeleton extends StatelessWidget {
+  const _CatalogSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ExcludeSemantics(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Align(
+          alignment: Alignment.bottomLeft,
+          child: Container(
+            margin: const EdgeInsets.all(12),
+            height: 16,
+            width: 84,
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

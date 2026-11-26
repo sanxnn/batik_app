@@ -7,6 +7,8 @@ import '../core/utils/api_error.dart';
 import '../models/bundle_model.dart';
 import '../models/order_model.dart';
 import '../widgets/common/content_state.dart';
+import '../widgets/catalog/catalog_add_button.dart';
+import '../widgets/catalog/catalog_image.dart';
 
 class BundleDetailView extends StatefulWidget {
   final int bundleId;
@@ -30,21 +32,6 @@ class _BundleDetailViewState extends State<BundleDetailView> {
   Future<BundleModel> _getDetail() =>
       context.read<BundleController>().service.getBundle(widget.bundleId);
 
-  Future<void> _add(BundleVariantModel variant) async {
-    final cart = context.read<CartController>();
-    final success = await cart.addToCart(variantId: variant.id, quantity: 1);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? 'Paket ditambahkan ke keranjang.'
-              : cart.errorMessage ?? 'Gagal menambahkan paket.',
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Detail paket')),
@@ -66,47 +53,74 @@ class _BundleDetailViewState extends State<BundleDetailView> {
             .where((variant) => variant.id == _variantId)
             .firstOrNull;
         final busy = context.watch<CartController>().isUpdating;
-        return ListView(
-          padding: const EdgeInsets.all(20),
+        return Column(
           children: [
-            Text(bundle.name, style: Theme.of(context).textTheme.titleLarge),
-            if (bundle.description != null) Text(bundle.description!),
-            const SizedBox(height: 12),
-            if (bundle.variants.isEmpty)
-              const Text('Varian paket belum tersedia.'),
-            for (final option in bundle.variants)
-              ListTile(
-                selected: option.id == _variantId,
-                leading: Icon(
-                  option.id == _variantId
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
-                ),
-                title: Text(option.name),
-                subtitle: Text(
-                  '${formatRupiah(option.price)} • Stok ${option.stock}',
-                ),
-                onTap: busy
-                    ? null
-                    : () => setState(() => _variantId = option.id),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: AspectRatio(
+                      aspectRatio: 1.4,
+                      child: CatalogImage(
+                        url: bundle.imageUrl,
+                        label: bundle.name,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    bundle.name,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  if (bundle.description != null) Text(bundle.description!),
+                  const SizedBox(height: 12),
+                  if (bundle.variants.isEmpty)
+                    const Text('Varian paket belum tersedia.')
+                  else
+                    Text(
+                      'Varian paket',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  for (final option in bundle.variants)
+                    ListTile(
+                      selected: option.id == _variantId,
+                      leading: Icon(
+                        option.id == _variantId
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                      ),
+                      title: Text(option.name),
+                      subtitle: Text(
+                        '${formatRupiah(option.price)} • Stok ${option.stock}',
+                      ),
+                      onTap: busy
+                          ? null
+                          : () => setState(() => _variantId = option.id),
+                    ),
+                  if (variant != null) ...[
+                    for (final component in variant.components)
+                      ListTile(
+                        title: Text(component.productName),
+                        subtitle: Text(
+                          '${component.quantity} × ${component.name}',
+                        ),
+                      ),
+                  ],
+                ],
               ),
-            if (variant != null) ...[
-              for (final component in variant.components)
-                ListTile(
-                  title: Text(component.productName),
-                  subtitle: Text('${component.quantity} × ${component.name}'),
-                ),
-              FilledButton(
-                onPressed: busy || variant.stock <= 0
-                    ? null
-                    : () => _add(variant),
-                child: Text(
-                  variant.stock > 0
+            ),
+            if (variant != null)
+              SafeArea(
+                minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: CatalogAddButton(
+                  variantId: variant.stock > 0 ? variant.id : null,
+                  label: variant.stock > 0
                       ? 'Tambah ke keranjang'
                       : 'Stok paket habis',
                 ),
               ),
-            ],
           ],
         );
       },
