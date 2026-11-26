@@ -21,8 +21,8 @@
 
 ## Checkout dan pembayaran
 
-1. Pilih alamat pengiriman. Jika ada voucher, masukkan kode dan tekan **Cek voucher**. Pratinjau menunjukkan potongan dan subtotal setelah voucher. Promo tanggal dan ongkir dihitung saat pembuatan pesanan.
-2. Tambahkan catatan jika perlu, lalu pilih **Buat pesanan dan lanjut bayar**. Aplikasi membuka detail pesanan setelah server membuat pesanan.
+1. Di langkah **Alamat**, pilih alamat pengiriman dan tekan **Tinjau pesanan**. Jika ada voucher, masukkan kode dan tekan **Cek voucher**. Pratinjau menunjukkan potongan dan subtotal setelah voucher. Promo tanggal dan ongkir dihitung saat pembuatan pesanan.
+2. Tambahkan catatan jika perlu, lalu pilih **Buat pesanan**. Aplikasi membuka langkah **Bayar** di detail pesanan setelah server membuat pesanan dan menampilkan total akhir.
 3. Tekan **Lanjutkan pembayaran** untuk membuka Snap. Tombol dapat meminta token baru jika token belum tersedia. Setelah kembali ke aplikasi, periksa status. Gunakan tombol perbarui jika notifikasi Midtrans masih diproses.
 4. Untuk pesanan yang masih menunggu pembayaran, buka **Batalkan pesanan** dari detail. Jika pembatalan belum dikonfirmasi, periksa status terbaru sebelum mencoba kembali.
 

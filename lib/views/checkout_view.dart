@@ -4,10 +4,14 @@ import 'package:provider/provider.dart';
 import '../controllers/address_controller.dart';
 import '../controllers/cart_controller.dart';
 import '../controllers/order_controller.dart';
-import '../models/order_model.dart';
 import '../core/utils/api_error.dart';
+import '../models/address_model.dart';
+import '../models/cart_model.dart';
+import '../models/order_model.dart';
 import '../services/order_service.dart';
-import '../theme/app_theme.dart';
+import '../widgets/auth/auth_button.dart';
+import '../widgets/checkout/checkout_steps.dart';
+import '../widgets/common/form_error.dart';
 import 'address_view.dart';
 import 'order_detail_view.dart';
 
@@ -21,41 +25,23 @@ class CheckoutView extends StatefulWidget {
 class _CheckoutViewState extends State<CheckoutView> {
   final _voucher = TextEditingController();
   final _notes = TextEditingController();
+  int _step = 1;
   int? _addressId;
   VoucherPreview? _preview;
+  CartModel? _previewCart;
   String? _voucherError;
+  String? _orderError;
+  bool _loadingAddresses = true;
   bool _checkingVoucher = false;
+  bool _submitting = false;
 
-  Future<bool> _checkVoucher() async {
-    final code = _voucher.text.trim();
-    final service = context.read<OrderController>().service;
-    setState(() {
-      _checkingVoucher = true;
-      _preview = null;
-      _voucherError = null;
-    });
-    try {
-      final preview = await service.validateVoucher(code);
-      if (!mounted) return false;
-      setState(() => _preview = preview);
-      return true;
-    } catch (error) {
-      if (mounted) setState(() => _voucherError = apiErrorMessage(error));
-      return false;
-    } finally {
-      if (mounted) setState(() => _checkingVoucher = false);
-    }
-  }
+  bool get _busy => _checkingVoucher || _submitting;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      await context.read<AddressController>().fetchAddresses();
-      if (!mounted) return;
-      final primary = context.read<AddressController>().primaryAddress;
-      setState(() => _addressId = primary?.id);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadAddresses();
     });
   }
 
@@ -66,184 +52,321 @@ class _CheckoutViewState extends State<CheckoutView> {
     super.dispose();
   }
 
-  Future<void> _checkout() async {
-    if (_addressId == null) {
-      _message('Pilih alamat pengiriman terlebih dahulu.');
-      return;
-    }
-    final cart = context.read<CartController>();
-    if (cart.isEmpty) {
-      _message('Keranjang kosong.');
-      return;
-    }
-    final controller = context.read<OrderController>();
-    if (_voucher.text.trim().isNotEmpty && _preview == null) {
-      if (!await _checkVoucher() || !mounted) return;
-    }
-    final result = await controller.checkout(
-      addressId: _addressId!,
-      voucherCode: _preview?.code,
-      notes: _notes.text.trim(),
-    );
+  Future<void> _loadAddresses() async {
+    final controller = context.read<AddressController>();
+    setState(() => _loadingAddresses = true);
+    await controller.fetchAddresses();
     if (!mounted) return;
-    if (result == null) {
-      _message(controller.errorMessage ?? 'Checkout gagal. Silakan coba lagi.');
-      return;
-    }
-    // Order sudah tersimpan di server; pengguna tetap dapat membayar dari riwayat.
-    await cart.fetchCart();
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => OrderDetailView(
-          orderId: result.order.id,
-          initialOrder: result.order,
-        ),
-      ),
-    );
+    setState(() {
+      _loadingAddresses = false;
+      if (_selectedAddress(controller) == null) {
+        _addressId = controller.primaryAddress?.id;
+      }
+    });
   }
 
-  void _message(String message) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message), backgroundColor: AppTheme.error),
-  );
+  AddressModel? _selectedAddress(AddressController addresses) =>
+      addresses.addresses.where((item) => item.id == _addressId).firstOrNull;
+
+  Future<void> _manageAddresses() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => const AddressView()),
+    );
+    if (mounted) await _loadAddresses();
+  }
+
+  Future<bool> _checkVoucher() async {
+    if (_checkingVoucher || _voucher.text.trim().isEmpty) return false;
+    final cart = context.read<CartController>();
+    if (cart.isEmpty || cart.isLoading || cart.isUpdating) return false;
+    final cartSnapshot = cart.cart;
+    final service = context.read<OrderController>().service;
+    setState(() {
+      _checkingVoucher = true;
+      _preview = null;
+      _voucherError = null;
+    });
+    try {
+      final result = await service.validateVoucher(_voucher.text.trim());
+      if (!mounted) return false;
+      if (!identical(cartSnapshot, cart.cart)) {
+        setState(
+          () => _voucherError = 'Keranjang berubah. Periksa voucher lagi.',
+        );
+        return false;
+      }
+      setState(() {
+        _preview = result;
+        _previewCart = cartSnapshot;
+      });
+      return true;
+    } catch (error) {
+      if (mounted) setState(() => _voucherError = apiErrorMessage(error));
+      return false;
+    } finally {
+      if (mounted) setState(() => _checkingVoucher = false);
+    }
+  }
+
+  Future<void> _checkout() async {
+    final cart = context.read<CartController>();
+    final addresses = context.read<AddressController>();
+    final orders = context.read<OrderController>();
+    final address = _selectedAddress(addresses);
+    if (_busy ||
+        orders.isSaving ||
+        cart.isEmpty ||
+        cart.isLoading ||
+        cart.isUpdating ||
+        address == null ||
+        addresses.errorMessage != null) {
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _submitting = true;
+      _orderError = null;
+    });
+    try {
+      if (_voucher.text.trim().isNotEmpty &&
+          (_preview == null || !identical(_previewCart, cart.cart))) {
+        if (!await _checkVoucher() || !mounted) return;
+      }
+      final result = await orders.checkout(
+        addressId: address.id,
+        voucherCode: _preview?.code,
+        notes: _notes.text.trim(),
+      );
+      if (!mounted) return;
+      if (result == null) {
+        setState(
+          () => _orderError = orders.errorMessage ?? 'Pesanan gagal dibuat.',
+        );
+        return;
+      }
+      cart.clearLocal();
+      cart.fetchCart();
+      Navigator.pushReplacement<void, void>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OrderDetailView(
+            orderId: result.order.id,
+            initialOrder: result.order,
+            checkoutPaymentStep: true,
+            initialSnapToken: result.snapToken,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  void _back() {
+    if (_busy) return;
+    if (_step == 2) {
+      FocusScope.of(context).unfocus();
+      setState(() => _step = 1);
+    } else {
+      Navigator.maybePop(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final addresses = context.watch<AddressController>();
     final cart = context.watch<CartController>();
     final orders = context.watch<OrderController>();
-    return Scaffold(
-      appBar: AppBar(title: const Text('Checkout')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Text(
-            'Alamat pengiriman',
-            style: Theme.of(context).textTheme.titleMedium,
+    final selected = _selectedAddress(addresses);
+    final busy = _busy || orders.isSaving;
+    final canContinue =
+        !busy &&
+        !_loadingAddresses &&
+        addresses.errorMessage == null &&
+        selected != null &&
+        !cart.isEmpty &&
+        !cart.isLoading &&
+        !cart.isUpdating;
+    return PopScope(
+      canPop: _step == 1 && !busy,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _step == 2) _back();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            tooltip: 'Kembali',
+            onPressed: busy ? null : _back,
+            icon: const BackButtonIcon(),
           ),
-          const SizedBox(height: 8),
-          if (addresses.isLoading) const LinearProgressIndicator(),
-          if (addresses.errorMessage != null)
-            Text(
-              addresses.errorMessage!,
-              style: const TextStyle(color: AppTheme.error),
-            ),
-          if (!addresses.isLoading && addresses.addresses.isEmpty)
-            const Text('Belum ada alamat. Tambahkan alamat sebelum checkout.'),
-          for (final address in addresses.addresses)
-            ListTile(
-              selected: _addressId == address.id,
-              leading: Icon(
-                _addressId == address.id
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_off,
+          title: const Text('Checkout'),
+        ),
+        body: SafeArea(
+          top: false,
+          child: ListView(
+            key: PageStorageKey('checkout-step-$_step'),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            children: [
+              CheckoutSteps(step: _step),
+              const SizedBox(height: 24),
+              if (cart.isEmpty && !cart.isLoading)
+                const FormError(
+                  'Keranjang kosong. Kembali ke katalog untuk memilih barang.',
+                ),
+              if (_step == 1)
+                ..._addressStep(addresses, busy)
+              else if (selected != null)
+                ..._reviewStep(selected, cart),
+              const SizedBox(height: 20),
+              if (_orderError case final error?) ...[
+                FormError(error),
+                const Text(
+                  'Jika koneksi terputus, periksa tab Pesanan sebelum mencoba lagi.',
+                ),
+                const SizedBox(height: 12),
+              ],
+              AuthButton(
+                text: _step == 1 ? 'Tinjau pesanan' : 'Buat pesanan',
+                icon: _step == 1
+                    ? Icons.arrow_forward_rounded
+                    : Icons.receipt_long_outlined,
+                isLoading: _submitting || orders.isSaving,
+                onPressed: !canContinue
+                    ? null
+                    : _step == 1
+                    ? () => setState(() => _step = 2)
+                    : _checkout,
               ),
-              title: Text('${address.label} • ${address.recipientName}'),
-              subtitle: Text(
-                '${address.detail}, ${address.city}, ${address.province} ${address.postalCode}',
-              ),
-              onTap: orders.isSaving
-                  ? null
-                  : () => setState(() => _addressId = address.id),
-            ),
-          TextButton.icon(
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddressView()),
-              );
-              if (!mounted) return;
-              await addresses.fetchAddresses();
-              if (!mounted) return;
-              if (!addresses.addresses.any(
-                (address) => address.id == _addressId,
-              )) {
-                setState(() => _addressId = addresses.primaryAddress?.id);
-              }
-            },
-            icon: const Icon(Icons.edit_location_alt_outlined),
-            label: const Text('Kelola alamat'),
+            ],
           ),
-          const Divider(height: 32),
-          Text('Ringkasan', style: Theme.of(context).textTheme.titleMedium),
-          for (final item in cart.items)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(item.variant.product.name),
-              subtitle: Text('${item.variant.name} • ${item.quantity} item'),
-              trailing: Text(formatRupiah(item.subtotal)),
-            ),
-          TextField(
-            controller: _voucher,
-            enabled: !_checkingVoucher && !orders.isSaving,
-            onChanged: (_) => setState(() {
-              _preview = null;
-              _voucherError = null;
-            }),
-            decoration: const InputDecoration(
-              labelText: 'Kode voucher (opsional)',
-            ),
-          ),
-          TextButton(
-            onPressed:
-                _checkingVoucher ||
-                    orders.isSaving ||
-                    _voucher.text.trim().isEmpty ||
-                    cart.isEmpty
-                ? null
-                : _checkVoucher,
-            child: Text(_checkingVoucher ? 'Memeriksa...' : 'Cek voucher'),
-          ),
-          if (_voucherError != null)
-            Text(_voucherError!, style: const TextStyle(color: AppTheme.error)),
-          if (_preview case final preview?) ...[
-            Text('Potongan voucher: ${formatRupiah(preview.discount)}'),
-            Text(
-              'Subtotal setelah voucher: ${formatRupiah(preview.subtotalAfterVoucher)}',
-            ),
-          ],
-          const SizedBox(height: 12),
-          TextField(
-            controller: _notes,
-            maxLines: 3,
-            decoration: const InputDecoration(labelText: 'Catatan (opsional)'),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Subtotal: ${formatRupiah(cart.totalPrice)}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const Text(
-            'Diskon dan ongkir final akan dihitung oleh server saat checkout.',
-          ),
-          if (orders.errorMessage != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text(
-                orders.errorMessage!,
-                style: const TextStyle(color: AppTheme.error),
-              ),
-            ),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed:
-                _checkingVoucher ||
-                    orders.isSaving ||
-                    addresses.isLoading ||
-                    addresses.errorMessage != null ||
-                    _addressId == null ||
-                    cart.isEmpty
-                ? null
-                : _checkout,
-            child: Text(
-              orders.isSaving
-                  ? 'Membuat pesanan...'
-                  : 'Buat pesanan dan lanjut bayar',
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
+
+  List<Widget> _addressStep(AddressController addresses, bool busy) => [
+    Text('Alamat pengiriman', style: Theme.of(context).textTheme.titleLarge),
+    const SizedBox(height: 10),
+    if (_loadingAddresses)
+      const LinearProgressIndicator(semanticsLabel: 'Memuat alamat'),
+    if (addresses.errorMessage case final message?)
+      FormError(message)
+    else if (!_loadingAddresses && addresses.addresses.isEmpty)
+      const Text('Tambahkan alamat untuk melanjutkan.'),
+    for (final address in addresses.addresses)
+      Card.outlined(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: ListTile(
+          selected: address.id == _addressId,
+          leading: Icon(
+            address.id == _addressId
+                ? Icons.radio_button_checked
+                : Icons.radio_button_off,
+          ),
+          title: Text(address.label),
+          subtitle: Text('${address.recipientName}\n${_addressText(address)}'),
+          onTap: busy || _loadingAddresses
+              ? null
+              : () => setState(() => _addressId = address.id),
+        ),
+      ),
+    Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        onPressed: busy || _loadingAddresses ? null : _manageAddresses,
+        icon: const Icon(Icons.edit_location_alt_outlined),
+        label: const Text('Kelola alamat'),
+      ),
+    ),
+  ];
+
+  List<Widget> _reviewStep(AddressModel selected, CartController cart) {
+    final theme = Theme.of(context);
+    final preview = identical(_previewCart, cart.cart) ? _preview : null;
+    return [
+      Text('Tinjau pesanan', style: theme.textTheme.titleLarge),
+      const SizedBox(height: 8),
+      Card.outlined(
+        margin: EdgeInsets.zero,
+        child: ListTile(
+          leading: const Icon(Icons.location_on_outlined),
+          title: Text('${selected.label} · ${selected.recipientName}'),
+          subtitle: Text(_addressText(selected)),
+        ),
+      ),
+      const SizedBox(height: 16),
+      for (final item in cart.items)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 12,
+            runSpacing: 4,
+            children: [
+              Text('${item.variant.product.name} × ${item.quantity}'),
+              Text(formatRupiah(item.subtotal)),
+            ],
+          ),
+        ),
+      const Divider(height: 24),
+      _amount('Subtotal barang', cart.totalPrice),
+      if (preview != null) ...[
+        _amount('Potongan voucher', -preview.discount),
+        _amount('Subtotal setelah voucher', preview.subtotalAfterVoucher),
+      ],
+      const SizedBox(height: 6),
+      Text(
+        'Promo otomatis, ongkir, dan total akhir terlihat setelah pesanan dibuat.',
+        style: theme.textTheme.bodySmall,
+      ),
+      const SizedBox(height: 20),
+      TextField(
+        controller: _voucher,
+        enabled: !_busy,
+        onChanged: (_) => setState(() {
+          _preview = null;
+          _voucherError = null;
+        }),
+        decoration: const InputDecoration(labelText: 'Kode voucher (opsional)'),
+      ),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton(
+          onPressed: _busy || cart.isEmpty || _voucher.text.trim().isEmpty
+              ? null
+              : _checkVoucher,
+          child: Text(_checkingVoucher ? 'Memeriksa voucher…' : 'Cek voucher'),
+        ),
+      ),
+      if (_voucherError case final message?) FormError(message),
+      TextField(
+        controller: _notes,
+        enabled: !_busy,
+        maxLines: 2,
+        decoration: const InputDecoration(labelText: 'Catatan (opsional)'),
+      ),
+    ];
+  }
+
+  String _addressText(AddressModel address) => [
+    address.detail,
+    address.village,
+    address.district,
+    address.city,
+    address.province,
+    address.postalCode,
+  ].whereType<String>().where((part) => part.isNotEmpty).join(', ');
+
+  Widget _amount(String label, num value) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Wrap(
+      spacing: 12,
+      runSpacing: 4,
+      alignment: WrapAlignment.spaceBetween,
+      children: [Text(label), Text(formatRupiah(value))],
+    ),
+  );
 }

@@ -5,13 +5,22 @@ import '../controllers/order_controller.dart';
 import '../core/network/payment_launcher.dart';
 import '../models/order_model.dart';
 import '../theme/app_theme.dart';
+import '../widgets/checkout/checkout_steps.dart';
 import 'order_view.dart';
 import 'refund_view.dart';
 
 class OrderDetailView extends StatefulWidget {
   final int orderId;
   final OrderModel? initialOrder;
-  const OrderDetailView({super.key, required this.orderId, this.initialOrder});
+  final bool checkoutPaymentStep;
+  final String? initialSnapToken;
+  const OrderDetailView({
+    super.key,
+    required this.orderId,
+    this.initialOrder,
+    this.checkoutPaymentStep = false,
+    this.initialSnapToken,
+  });
 
   @override
   State<OrderDetailView> createState() => _OrderDetailViewState();
@@ -21,11 +30,14 @@ class _OrderDetailViewState extends State<OrderDetailView>
     with WidgetsBindingObserver {
   OrderModel? _order;
   bool _loading = false;
+  bool _launchingPayment = false;
+  String? _paymentToken;
 
   @override
   void initState() {
     super.initState();
     _order = widget.initialOrder;
+    _paymentToken = widget.initialSnapToken;
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
   }
@@ -50,31 +62,49 @@ class _OrderDetailViewState extends State<OrderDetailView>
     if (!mounted) return;
     setState(() {
       _order = updated ?? _order;
+      if (updated != null && updated.status != 'pending_payment') {
+        _paymentToken = null;
+      }
       _loading = false;
     });
   }
 
   Future<void> _pay() async {
+    if (_launchingPayment) return;
     final controller = context.read<OrderController>();
-    final token = _order?.snapToken?.isNotEmpty == true
-        ? _order!.snapToken
-        : await controller.paymentToken(widget.orderId);
-    if (!mounted) return;
-    if (token == null || token.isEmpty) {
-      _message(
-        controller.errorMessage ?? 'Pembayaran belum tersedia. Coba lagi.',
-        error: true,
-      );
-      return;
-    }
+    setState(() => _launchingPayment = true);
     try {
-      if (!await PaymentLauncher.open(token)) {
-        _message('Halaman pembayaran tidak dapat dibuka.', error: true);
+      final serverToken = _order?.snapToken;
+      final known = serverToken?.isNotEmpty == true
+          ? serverToken
+          : _paymentToken;
+      final token = known?.isNotEmpty == true
+          ? known
+          : await controller.paymentToken(widget.orderId);
+      if (!mounted) return;
+      if (token == null || token.isEmpty) {
+        _message(
+          controller.errorMessage ?? 'Pembayaran belum tersedia. Coba lagi.',
+          error: true,
+        );
+        return;
+      }
+      _paymentToken = token;
+      if (!await PaymentLauncher.open(token) && mounted) {
+        _message(
+          'Halaman pembayaran tidak dapat dibuka. Coba lagi.',
+          error: true,
+        );
       }
     } catch (_) {
       if (mounted) {
-        _message('Halaman pembayaran tidak dapat dibuka.', error: true);
+        _message(
+          'Halaman pembayaran tidak dapat dibuka. Coba lagi.',
+          error: true,
+        );
       }
+    } finally {
+      if (mounted) setState(() => _launchingPayment = false);
     }
   }
 
@@ -167,7 +197,10 @@ class _OrderDetailViewState extends State<OrderDetailView>
   @override
   Widget build(BuildContext context) {
     final order = _order;
-    final busy = _loading || context.watch<OrderController>().isSaving;
+    final busy =
+        _loading ||
+        _launchingPayment ||
+        context.watch<OrderController>().isSaving;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detail Pesanan'),
@@ -188,6 +221,15 @@ class _OrderDetailViewState extends State<OrderDetailView>
           : ListView(
               padding: const EdgeInsets.all(20),
               children: [
+                if (widget.checkoutPaymentStep) ...[
+                  const CheckoutSteps(step: 3),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Pesanan dibuat',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 6),
+                ],
                 Text(
                   order.number,
                   style: Theme.of(context).textTheme.titleLarge,
@@ -224,13 +266,23 @@ class _OrderDetailViewState extends State<OrderDetailView>
                 _amount('Diskon', -order.discount),
                 _amount('Ongkir', order.shippingCost),
                 const Divider(),
-                _amount('Total dibayar', order.total, strong: true),
+                _amount(
+                  order.paymentStatus == 'success'
+                      ? 'Total dibayar'
+                      : 'Total pesanan',
+                  order.total,
+                  strong: true,
+                ),
                 const SizedBox(height: 24),
                 if (order.status == 'pending_payment' &&
                     order.paymentStatus != 'success') ...[
                   FilledButton(
                     onPressed: busy ? null : _pay,
-                    child: const Text('Lanjutkan pembayaran'),
+                    child: Text(
+                      _launchingPayment
+                          ? 'Membuka pembayaran…'
+                          : 'Lanjutkan pembayaran',
+                    ),
                   ),
                   TextButton(
                     onPressed: busy ? null : _cancel,

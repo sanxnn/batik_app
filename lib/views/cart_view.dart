@@ -1,15 +1,17 @@
-import 'package:batik_app/widgets/cart/cart_item_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/cart_controller.dart';
 import '../models/cart_model.dart';
-import '../theme/app_theme.dart';
+import '../widgets/cart/cart_item_card.dart';
 import '../widgets/cart/cart_summary.dart';
+import '../widgets/common/content_state.dart';
 import 'checkout_view.dart';
 
 class CartView extends StatefulWidget {
-  const CartView({super.key});
+  const CartView({super.key, required this.onBrowse});
+
+  final VoidCallback onBrowse;
 
   @override
   State<CartView> createState() => _CartViewState();
@@ -19,385 +21,155 @@ class _CartViewState extends State<CartView> {
   @override
   void initState() {
     super.initState();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.read<CartController>().fetchCart();
-      }
+      if (mounted) context.read<CartController>().fetchCart();
     });
   }
 
-  Future<void> _confirmDelete(CartItemModel item) async {
+  Future<void> _remove([CartItemModel? item]) async {
+    final clearing = item == null;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Hapus Produk'),
-          content: Text(
-            'Apakah kamu yakin ingin menghapus '
-            '${item.variant.product.name} dari keranjang?',
+      builder: (dialog) => AlertDialog(
+        title: Text(clearing ? 'Kosongkan keranjang?' : 'Hapus produk?'),
+        content: Text(
+          clearing
+              ? 'Semua barang akan dihapus dari keranjang.'
+              : '${item.variant.product.name} akan dihapus dari keranjang.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: const Text('Batal'),
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, true),
+            child: Text(
+              clearing ? 'Kosongkan' : 'Hapus',
+              style: TextStyle(color: Theme.of(dialog).colorScheme.error),
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Batal'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Hapus', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
-
     if (confirmed != true || !mounted) return;
-
-    final controller = context.read<CartController>();
-
-    final success = await controller.removeItem(item.id);
-
+    final cart = context.read<CartController>();
+    if (cart.isUpdating || cart.isLoading) return;
+    final success = clearing
+        ? await cart.clearCart()
+        : await cart.removeItem(item.id);
     if (!mounted) return;
-
-    _showMessage(
+    _message(
       success
-          ? 'Produk berhasil dihapus.'
-          : controller.errorMessage ?? 'Gagal menghapus produk.',
-      isError: !success,
+          ? (clearing ? 'Keranjang dikosongkan.' : 'Produk dihapus.')
+          : cart.errorMessage ?? 'Keranjang gagal diperbarui.',
     );
   }
 
-  Future<void> _confirmClearCart() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Kosongkan Keranjang'),
-          content: const Text(
-            'Semua produk dalam keranjang akan dihapus. '
-            'Apakah kamu yakin?',
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Batal'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text(
-                'Kosongkan',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true || !mounted) return;
-
-    final controller = context.read<CartController>();
-
-    final success = await controller.clearCart();
-
-    if (!mounted) return;
-
-    _showMessage(
-      success
-          ? 'Keranjang berhasil dikosongkan.'
-          : controller.errorMessage ?? 'Gagal mengosongkan keranjang.',
-      isError: !success,
-    );
-  }
-
-  Future<void> _changeQuantity(CartItemModel item, int quantity) async {
-    final controller = context.read<CartController>();
-
-    final success = await controller.updateQuantity(
+  Future<void> _quantity(CartItemModel item, int quantity) async {
+    final cart = context.read<CartController>();
+    if (cart.isUpdating || cart.isLoading) return;
+    final success = await cart.updateQuantity(
       itemId: item.id,
       quantity: quantity,
     );
-
-    if (!mounted || success) return;
-
-    _showMessage(
-      controller.errorMessage ?? 'Gagal memperbarui jumlah produk.',
-      isError: true,
-    );
+    if (mounted && !success) {
+      _message(cart.errorMessage ?? 'Jumlah gagal diperbarui.');
+    }
   }
 
-  void _showMessage(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: isError ? AppTheme.error : AppTheme.primaryDark,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-  }
+  void _message(String message) => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
 
   @override
   Widget build(BuildContext context) {
+    final cart = context.watch<CartController>();
+    final busy = cart.isUpdating || cart.isLoading;
     return Scaffold(
-      backgroundColor: AppTheme.background,
-
       appBar: AppBar(
-        backgroundColor: AppTheme.background,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: false,
-        title: const Text(
-          'Keranjang Saya',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: AppTheme.textPrimary,
-          ),
-        ),
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: AppTheme.textPrimary,
-            size: 20,
-          ),
-        ),
+        title: const Text('Keranjang'),
         actions: [
-          Consumer<CartController>(
-            builder: (context, controller, child) {
-              if (controller.isEmpty || controller.isLoading) {
-                return const SizedBox.shrink();
-              }
-
-              return TextButton.icon(
-                onPressed: controller.isUpdating ? null : _confirmClearCart,
-                icon: const Icon(
-                  Icons.delete_outline,
-                  size: 18,
-                  color: Colors.redAccent,
-                ),
-                label: const Text(
-                  'Kosongkan',
-                  style: TextStyle(
-                    color: Colors.redAccent,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
+          if (!cart.isEmpty)
+            IconButton(
+              tooltip: 'Kosongkan keranjang',
+              onPressed: busy ? null : _remove,
+              icon: const Icon(Icons.delete_sweep_outlined),
+            ),
         ],
       ),
-
-      body: Consumer<CartController>(
-        builder: (context, controller, child) {
-          // Loading
-          if (controller.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: Color(0xFFE6A000)),
-            );
-          }
-
-          // Error saat mengambil keranjang
-          if (controller.errorMessage != null && controller.cart == null) {
-            return _buildError(controller.errorMessage!);
-          }
-
-          // Keranjang kosong
-          if (controller.isEmpty) {
-            return _buildEmptyCart();
-          }
-
-          // Daftar produk
-          return RefreshIndicator(
-            color: const Color(0xFFE6A000),
-            onRefresh: controller.fetchCart,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 30),
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.shopping_bag_outlined,
-                      color: Color(0xFFE6A000),
-                      size: 22,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${controller.items.length} jenis produk',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 18),
-
-                ...controller.items.map((item) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: CartItemCard(
-                      key: ValueKey(item.id),
-                      item: item,
-                      isUpdating: controller.isUpdating,
-                      onQuantityChanged: (quantity) {
-                        _changeQuantity(item, quantity);
-                      },
-                      onDelete: () {
-                        _confirmDelete(item);
-                      },
-                    ),
-                  );
-                }),
-
-                if (controller.errorMessage != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    controller.errorMessage!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          if (!cart.isUpdating && !cart.isLoading) await cart.fetchCart();
+        },
+        child: ListView.separated(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+          itemCount: cart.isEmpty ? 1 : cart.items.length + 1,
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            if (cart.isEmpty) {
+              if (busy) return const ContentLoading(label: 'Memuat keranjang');
+              if (cart.errorMessage case final error?) {
+                return ContentState(
+                  icon: Icons.sync_problem_rounded,
+                  message: error,
+                  onRetry: cart.fetchCart,
+                );
+              }
+              return Column(
+                children: [
+                  const ContentState(
+                    icon: Icons.shopping_bag_outlined,
+                    message: 'Keranjang masih kosong.',
+                  ),
+                  OutlinedButton(
+                    onPressed: widget.onBrowse,
+                    child: const Text('Lihat katalog'),
                   ),
                 ],
-              ],
-            ),
-          );
-        },
-      ),
-
-      bottomNavigationBar: Consumer<CartController>(
-        builder: (context, controller, child) {
-          if (controller.isLoading ||
-              controller.isEmpty ||
-              controller.cart == null) {
-            return const SizedBox.shrink();
-          }
-
-          return CartSummary(
-            totalItems: controller.totalItems,
-            totalPrice: controller.totalPrice,
-            onCheckout: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CheckoutView()),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildEmptyCart() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(30),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(28),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFF4E0),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.shopping_cart_outlined,
-                size: 65,
-                color: Color(0xFFE6A000),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            const Text(
-              'Keranjang Masih Kosong',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            const Text(
-              'Yuk, temukan koleksi batik favoritmu '
-              'dan tambahkan ke keranjang.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-                height: 1.5,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFB800),
-                foregroundColor: const Color(0xFF292929),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
-              ),
-              child: const Text(
-                'Mulai Belanja',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
-          ],
+              );
+            }
+            if (index == 0) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${cart.totalItems} item',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  if (busy)
+                    const LinearProgressIndicator(
+                      semanticsLabel: 'Memperbarui keranjang',
+                    ),
+                ],
+              );
+            }
+            final item = cart.items[index - 1];
+            return CartItemCard(
+              key: ValueKey(item.id),
+              item: item,
+              isUpdating: busy,
+              onQuantityChanged: (value) => _quantity(item, value),
+              onDelete: () => _remove(item),
+            );
+          },
         ),
       ),
-    );
-  }
-
-  Widget _buildError(String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.cloud_off_outlined, size: 60, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text(
-              'Gagal Memuat Keranjang',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+      bottomNavigationBar: cart.isEmpty
+          ? null
+          : CartSummary(
+              totalItems: cart.totalItems,
+              totalPrice: cart.totalPrice,
+              onCheckout: busy
+                  ? null
+                  : () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => const CheckoutView(),
+                      ),
+                    ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: AppTheme.textSecondary),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: () {
-                context.read<CartController>().fetchCart();
-              },
-              icon: const Icon(Icons.refresh),
-              label: const Text('Coba Lagi'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

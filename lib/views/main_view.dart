@@ -17,7 +17,7 @@ class _MainViewState extends State<MainView> {
 
   late final List<Widget> _pages = [
     const HomeView(),
-    const CartView(),
+    CartView(onBrowse: () => setState(() => _currentIndex = 0)),
     const OrderView(),
     ProfileView(onOrders: () => setState(() => _currentIndex = 2)),
   ];
