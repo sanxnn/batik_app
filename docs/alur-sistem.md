@@ -76,4 +76,17 @@ Laravel dan admin menangani jalur manual maupun Midtrans. Detail pesanan menampi
 | `approved` | Backend sudah membuat order terkait. Gunakan `data.id` pesanan hasil persetujuan untuk membuka detail dan melanjutkan pembayaran. |
 | `rejected`, `cancelled` | Pengajuan ditutup. Aplikasi menampilkan keputusan dan catatan yang tersedia. |
 
-[Panduan fitur](fitur.md) · [Peta integrasi API](../roadmap.md)
+[Panduan fitur](fitur.md) · [Peta integrasi API](referensi-integrasi-api.md)
+
+## Alamat dan keranjang sebagai prasyarat checkout
+
+1. Form alamat mengambil empat tingkat wilayah. Setiap pilihan menjadi parameter untuk tingkat berikutnya. Kode bertitik seperti `35.09.01` dipakai sebagai string agar nol di depan setiap segmen tetap utuh.
+2. Setelah alamat berhasil disimpan, aplikasi dapat memuatnya kembali dan memakai ID alamat untuk checkout atau persetujuan custom order. Checkout memilih alamat utama ketika tersedia dan memungkinkan pelanggan menggantinya.
+3. Detail produk dan bundle mengirim ID varian ke endpoint penambahan barang. `GET /cart` dan respons mutasi menentukan isi keranjang yang dilihat pelanggan. Jumlah bisa dipengaruhi perubahan stok dari sisi toko.
+4. Laravel memeriksa keranjang saat checkout. Jika stok atau voucher berubah, tampilkan pesan server dan sesuaikan pilihan sebelum mencoba lagi. Setelah checkout berhasil, Flutter meminta ulang keranjang dan membuka detail pesanan yang baru dibuat.
+
+## Batas konsistensi yang perlu diuji
+
+- Konfirmasi penerimaan aman diulang saat pesanan berbayar sudah `completed`. Detail harus tetap menampilkan ringkasan refund setelah operasi.
+- Server memproses transaksi pembayaran secara asinkron. Status lokal yang terlihat setelah browser ditutup dapat tertinggal sampai request detail berikutnya.
+- Untuk regresi backend custom order, uji persetujuan dan pembatalan dari dua sesi. Pada revisi backend yang diaudit, persetujuan mengunci dan memeriksa ulang baris, sedangkan pembatalan memakai status dari objek yang sudah dimuat. Pemeriksaan ini berasal dari audit kode dan belum diuji dengan dua koneksi. [Controller custom order Laravel](https://github.com/sanxnn/rubung-v3/blob/6044a28/app/Http/Controllers/Api/CustomOrderController.php)

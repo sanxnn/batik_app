@@ -1,12 +1,12 @@
 # Batik Rubung Kuning — aplikasi pelanggan
 
-Aplikasi Flutter untuk akun pelanggan, katalog, bundling, alamat, keranjang, checkout, pembayaran Midtrans, pengiriman, refund, dan custom order. Kontrak integrasi mengikuti [referensi API backend](https://github.com/sanxnn/rubung-v3/blob/main/docs/api-reference.md). Mulai dari [dokumentasi aplikasi](dokumentasi.md) untuk arsitektur, fitur, alur sistem, dan panduan pengujian.
+Aplikasi Flutter untuk akun pelanggan, katalog, bundling, alamat, keranjang, checkout, pembayaran Midtrans, pengiriman, refund, dan custom order. Kontrak integrasi mengikuti [referensi API backend](https://github.com/sanxnn/rubung-v3/blob/main/docs/api-reference.md). Mulai dari [dokumentasi aplikasi](docs/README.md) untuk arsitektur, fitur, alur sistem, dan panduan pengujian.
 
 ## Persyaratan
 
 - Flutter dengan Dart SDK yang memenuhi `pubspec.yaml` (`^3.13.1`).
 - Untuk build Android: JDK lengkap yang menyediakan `javac`, Android SDK, dan signing release milik tim.
-- Backend Laravel dengan versi API yang sesuai dengan [peta integrasi Flutter](roadmap.md).
+- Backend Laravel dengan versi API yang sesuai dengan [peta integrasi Flutter](docs/referensi-integrasi-api.md).
 - Untuk uji pembayaran: akun dan konfigurasi Midtrans sandbox di backend. Production memerlukan konfigurasi Midtrans production di backend.
 
 ## Menjalankan aplikasi
@@ -36,5 +36,5 @@ Konfigurasi signing Android/iOS, identitas aplikasi, ikon, dan pengujian transak
 
 - [Fitur dan panduan pelanggan](docs/fitur.md)
 - [Alur sistem dan perubahan status](docs/alur-sistem.md)
-- [Peta integrasi API](roadmap.md)
+- [Peta integrasi API](docs/referensi-integrasi-api.md)
 - [Skenario pengujian dan persiapan rilis](docs/pengujian-dan-rilis.md)
