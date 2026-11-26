@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../widgets/common/form_error.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -15,6 +16,7 @@ class LoginView extends StatefulWidget {
 
 class _LoginViewState extends State<LoginView> {
   final _formKey = GlobalKey<FormState>();
+  String? _submitError;
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
 
@@ -31,6 +33,9 @@ class _LoginViewState extends State<LoginView> {
     if (!_formKey.currentState!.validate()) return;
 
     final controller = context.read<AuthController>();
+    if (controller.isLoading) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _submitError = null);
 
     final success = await controller.login(
       _emailCtrl.text.trim(),
@@ -42,17 +47,7 @@ class _LoginViewState extends State<LoginView> {
     if (success) {
       Navigator.pushReplacementNamed(context, '/home');
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(controller.errorMessage ?? 'Login gagal'),
-          backgroundColor: const Color(0xFFD94040),
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-      );
+      setState(() => _submitError = controller.errorMessage ?? 'Login gagal');
     }
   }
 
@@ -61,19 +56,22 @@ class _LoginViewState extends State<LoginView> {
     return Consumer<AuthController>(
       builder: (context, controller, _) {
         return AuthLayout(
-          title: 'Selamat datang!',
-          subtitle: 'Masuk dan temukan karya batik yang punya cerita.',
+          title: 'Masuk ke akun',
+          subtitle: 'Gunakan email dan kata sandi yang terdaftar.',
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (_submitError case final message?) FormError(message),
                 AuthTextField(
                   controller: _emailCtrl,
                   label: 'Email',
                   hint: 'mail@example.com',
                   icon: Icons.alternate_email_rounded,
+                  enabled: !controller.isLoading,
                   keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Email wajib diisi';
@@ -88,12 +86,17 @@ class _LoginViewState extends State<LoginView> {
                 const SizedBox(height: 22),
                 AuthTextField(
                   controller: _passwordCtrl,
-                  label: 'Password',
-                  hint: 'Masukkan password',
+                  label: 'Kata sandi',
+                  hint: 'Masukkan kata sandi',
                   icon: Icons.lock_outline_rounded,
+                  enabled: !controller.isLoading,
+                  autofillHints: const [AutofillHints.password],
                   obscureText: _obscurePassword,
                   textInputAction: TextInputAction.done,
                   suffixIcon: IconButton(
+                    tooltip: _obscurePassword
+                        ? 'Tampilkan kata sandi'
+                        : 'Sembunyikan kata sandi',
                     onPressed: () {
                       setState(() {
                         _obscurePassword = !_obscurePassword;
@@ -101,13 +104,13 @@ class _LoginViewState extends State<LoginView> {
                     },
                     icon: Icon(
                       _obscurePassword
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
                     ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Password wajib diisi';
+                      return 'Kata sandi wajib diisi';
                     }
                     return null;
                   },
@@ -121,9 +124,11 @@ class _LoginViewState extends State<LoginView> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/forgot-password'),
-                    child: const Text('Lupa password?'),
+                    onPressed: controller.isLoading
+                        ? null
+                        : () =>
+                              Navigator.pushNamed(context, '/forgot-password'),
+                    child: const Text('Lupa kata sandi?'),
                   ),
                 ),
                 const SizedBox(height: 22),
@@ -135,9 +140,11 @@ class _LoginViewState extends State<LoginView> {
                 ),
                 const SizedBox(height: 20),
                 AuthButton(
-                  text: 'Daftar Sekarang',
+                  text: 'Buat akun',
                   outlined: true,
-                  onPressed: () => Navigator.pushNamed(context, '/register'),
+                  onPressed: controller.isLoading
+                      ? null
+                      : () => Navigator.pushNamed(context, '/register'),
                 ),
               ],
             ),

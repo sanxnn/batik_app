@@ -11,7 +11,7 @@
 - **Beranda** menampilkan kategori, produk reguler, dan paket. Banner dapat digeser atau dipindah dengan tombol panah. Pencarian dan penggantian filter memuat kembali halaman pertama. Gunakan **Muat produk lainnya** atau **Muat paket lainnya** untuk meneruskan daftar.
 - Detail produk memuat ulang informasi varian. Pilih varian dan jumlah sebelum menambah ke keranjang. Varian reguler kategori Batik dengan stok nol dapat mengikuti pre-order. Varian kategori lain membutuhkan stok.
 - Detail bundle menampilkan harga, stok paket, dan komponen untuk varian yang dipilih. Tombol tambah tersedia saat varian terpilih memiliki stok. Laravel menghitung stok bundle berdasarkan persediaan komponen.
-- Tombol favorit di katalog masih berupa placeholder. Aplikasi belum menyimpan daftar favorit.
+- Aplikasi belum menyediakan daftar favorit.
 
 ## Alamat dan keranjang
 
@@ -47,8 +47,8 @@
 
 | Aksi | Lokasi dan perilaku saat ini |
 | --- | --- |
-| Buka riwayat pesanan | Gunakan tab **Pesanan** pada navigasi bawah. Baris **Pesanan Saya** di Profil masih menampilkan pemberitahuan sementara. |
+| Buka riwayat pesanan | Gunakan tab **Pesanan** pada navigasi bawah atau pilih **Pesanan saya** di Profil. |
 | Buka riwayat refund | Gunakan ikon **Riwayat refund** pada bilah atas tab **Pesanan**. |
 | Buka detail paket | Pilih kartu pada bagian paket di **Beranda**, lalu pilih varian untuk menampilkan komponen dan membeli. |
 | Cari produk | Pencarian di **Semua** mencakup produk reguler dan paket. Filter **Bundling** menampilkan daftar paket. Kategori produk reguler memakai filter kategori yang tersedia di UI. |
-| Kelola bantuan atau favorit | Bantuan & FAQ di Profil dan tombol favorit belum terhubung dengan alur backend. |
+| Kelola bantuan atau favorit | Bantuan & FAQ dan favorit belum tersedia di aplikasi. |

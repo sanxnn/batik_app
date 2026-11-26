@@ -1,10 +1,12 @@
-import 'package:batik_app/controllers/address_controller.dart';
-import 'package:batik_app/views/form_address_view.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../controllers/address_controller.dart';
 import '../models/address_model.dart';
-import '../theme/app_theme.dart';
+import '../widgets/common/content_state.dart';
+import 'form_address_view.dart';
+
+enum _AddressAction { edit, primary, remove }
 
 class AddressView extends StatefulWidget {
   const AddressView({super.key});
@@ -14,302 +16,187 @@ class AddressView extends StatefulWidget {
 }
 
 class _AddressViewState extends State<AddressView> {
+  bool _mutating = false;
+
   @override
   void initState() {
     super.initState();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.read<AddressController>().fetchAddresses();
-      }
+      if (mounted) context.read<AddressController>().fetchAddresses();
     });
   }
 
-  void _openForm({AddressModel? address}) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => AddressFormView(address: address)),
-    );
+  void _openForm([AddressModel? address]) => Navigator.push(
+    context,
+    MaterialPageRoute<bool>(builder: (_) => AddressFormView(address: address)),
+  );
 
-    if (result == true && mounted) {
-      context.read<AddressController>().fetchAddresses();
+  Future<void> _action(_AddressAction action, AddressModel address) async {
+    if (_mutating) return;
+    if (action == _AddressAction.edit) {
+      _openForm(address);
+      return;
     }
-  }
-
-  void _confirmDelete(AddressModel address) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Hapus Alamat'),
-        content: Text(
-          'Apakah Anda yakin ingin menghapus alamat ${address.label}?',
+    final removing = action == _AddressAction.remove;
+    if (removing) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: const Text('Hapus alamat?'),
+          content: Text('Alamat “${address.label}” akan dihapus dari daftar.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialog),
+              child: const Text('Batal'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialog, true),
+              child: Text(
+                'Hapus',
+                style: TextStyle(color: Theme.of(dialog).colorScheme.error),
+              ),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-
-              final success = await context
-                  .read<AddressController>()
-                  .deleteAddress(address.id);
-
-              if (!mounted) return;
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    success
-                        ? 'Alamat berhasil dihapus.'
-                        : 'Gagal menghapus alamat.',
-                  ),
-                ),
-              );
-            },
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+      );
+      if (confirmed != true || !mounted || _mutating) return;
+    }
+    setState(() => _mutating = true);
+    final controller = context.read<AddressController>();
+    final success = removing
+        ? await controller.deleteAddress(address.id)
+        : await controller.setPrimary(address.id);
+    if (!mounted) return;
+    setState(() => _mutating = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? (removing ? 'Alamat dihapus.' : 'Alamat utama diperbarui.')
+              : controller.errorMessage ?? 'Alamat gagal diperbarui.',
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final controller = context.watch<AddressController>();
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: const Text(
-          'Alamat Saya',
-          style: TextStyle(fontWeight: FontWeight.bold),
+      appBar: AppBar(title: const Text('Alamat saya')),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: FilledButton.icon(
+          onPressed: _mutating ? null : _openForm,
+          icon: const Icon(Icons.add_location_alt_outlined),
+          label: const Text('Tambah alamat'),
         ),
-        backgroundColor: AppTheme.background,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
       ),
-
-      body: Consumer<AddressController>(
-        builder: (context, controller, child) {
-          if (controller.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (controller.errorMessage != null && controller.addresses.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(controller.errorMessage!, textAlign: TextAlign.center),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: controller.fetchAddresses,
-                    child: const Text('Coba Lagi'),
-                  ),
-                ],
+      body: RefreshIndicator(
+        onRefresh: controller.fetchAddresses,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+          children: [
+            if (controller.isLoading || _mutating)
+              const LinearProgressIndicator(semanticsLabel: 'Memuat alamat'),
+            if (controller.errorMessage case final error?)
+              ContentState(
+                icon: Icons.sync_problem_rounded,
+                message: error,
+                onRetry: controller.fetchAddresses,
+              )
+            else if (controller.addresses.isEmpty && !controller.isLoading)
+              const ContentState(
+                icon: Icons.location_on_outlined,
+                message: 'Belum ada alamat pengiriman.',
               ),
-            );
-          }
-
-          if (controller.addresses.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.location_off_outlined,
-                      size: 65,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Belum Ada Alamat',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+            for (final address in controller.addresses)
+              Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                color: scheme.surface,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: scheme.outlineVariant),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              address.label,
+                              style: theme.textTheme.titleMedium,
+                            ),
+                          ),
+                          PopupMenuButton<_AddressAction>(
+                            tooltip: 'Opsi alamat ${address.label}',
+                            enabled: !_mutating,
+                            onSelected: (action) => _action(action, address),
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(
+                                value: _AddressAction.edit,
+                                child: Text('Edit alamat'),
+                              ),
+                              if (!address.isPrimary)
+                                const PopupMenuItem(
+                                  value: _AddressAction.primary,
+                                  child: Text('Jadikan alamat utama'),
+                                ),
+                              const PopupMenuItem(
+                                value: _AddressAction.remove,
+                                child: Text('Hapus alamat'),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Tambahkan alamat untuk mempermudah pengiriman pesanan.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      onPressed: () => _openForm(),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Tambah Alamat'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: controller.fetchAddresses,
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                const Text(
-                  'Daftar Alamat Pengiriman',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Kelola alamat untuk kebutuhan pengiriman pesanan Anda.',
-                  style: TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 20),
-
-                ...controller.addresses.map(
-                  (address) => _buildAddressCard(address, controller),
-                ),
-
-                const SizedBox(height: 12),
-
-                OutlinedButton.icon(
-                  onPressed: () => _openForm(),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Tambah Alamat Baru'),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    foregroundColor: AppTheme.primaryDark,
-                    side: const BorderSide(color: AppTheme.primaryDark),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildAddressCard(AddressModel address, AddressController controller) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: address.isPrimary ? AppTheme.primaryDark : AppTheme.border,
-          width: address.isPrimary ? 1.5 : 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.location_on_outlined,
-                color: AppTheme.primaryDark,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  address.label,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              if (address.isPrimary)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Utama',
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          Text(
-            address.recipientName,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-          ),
-
-          const SizedBox(height: 4),
-
-          Text(address.phone, style: const TextStyle(color: Colors.grey)),
-
-          const SizedBox(height: 10),
-
-          Text(
-            '${address.detail}, '
-            '${address.district == null ? '' : '${address.district}, '}'
-            '${address.city}, ${address.province}, '
-            '${address.postalCode}',
-            style: const TextStyle(height: 1.5, color: AppTheme.textSecondary),
-          ),
-
-          const Divider(height: 25),
-
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              TextButton.icon(
-                onPressed: () => _openForm(address: address),
-                icon: const Icon(Icons.edit_outlined, size: 17),
-                label: const Text('Edit'),
-              ),
-
-              TextButton.icon(
-                onPressed: () => _confirmDelete(address),
-                icon: const Icon(
-                  Icons.delete_outline,
-                  size: 17,
-                  color: Colors.red,
-                ),
-                label: const Text('Hapus', style: TextStyle(color: Colors.red)),
-              ),
-
-              if (!address.isPrimary)
-                TextButton(
-                  onPressed: () async {
-                    final success = await controller.setPrimary(address.id);
-
-                    if (!mounted) return;
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          success
-                              ? 'Alamat utama berhasil diubah.'
-                              : 'Gagal mengubah alamat utama.',
+                      if (address.isPrimary)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            'Alamat utama',
+                            style: TextStyle(
+                              color: scheme.onSecondaryContainer,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      Text(
+                        address.recipientName,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                      Text(address.phone),
+                      const SizedBox(height: 6),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Text(
+                          [
+                                address.detail,
+                                address.village,
+                                address.district,
+                                address.city,
+                                address.province,
+                                address.postalCode,
+                              ]
+                              .whereType<String>()
+                              .where((part) => part.isNotEmpty)
+                              .join(', '),
+                          style: TextStyle(color: scheme.onSurfaceVariant),
                         ),
                       ),
-                    );
-                  },
-                  child: const Text('Jadikan Utama'),
+                    ],
+                  ),
                 ),
-            ],
-          ),
-        ],
+              ),
+          ],
+        ),
       ),
     );
   }

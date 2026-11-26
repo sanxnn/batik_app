@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../widgets/common/form_error.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/auth/auth_layout.dart';
 import '../../widgets/auth/auth_text_field.dart';
@@ -18,6 +19,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
   final _passwordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  String? _submitError;
   bool _isSubmitting = false;
 
   String? _email;
@@ -51,8 +53,11 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
     if (!_formKey.currentState!.validate() || _isSubmitting) return;
     if (_email == null || _resetToken == null) return;
 
-    setState(() => _isSubmitting = true);
     final controller = context.read<AuthController>();
+    if (controller.isLoading) return;
+    setState(() => _isSubmitting = true);
+    FocusScope.of(context).unfocus();
+    setState(() => _submitError = null);
 
     final success = await controller.resetPassword(
       email: _email!,
@@ -74,11 +79,9 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
       // Hapus semua halaman dan arahkan ke login
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(controller.errorMessage ?? 'Gagal mengubah password.'),
-          backgroundColor: AppTheme.error,
-        ),
+      setState(
+        () => _submitError =
+            controller.errorMessage ?? 'Gagal mengubah password.',
       );
     }
   }
@@ -96,6 +99,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (_submitError case final message?) FormError(message),
                 AuthTextField(
                   controller: _passwordCtrl,
                   label: 'Password Baru',

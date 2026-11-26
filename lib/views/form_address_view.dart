@@ -5,7 +5,11 @@ import 'package:provider/provider.dart';
 import '../models/address_model.dart';
 import '../core/utils/api_error.dart';
 import '../services/address_service.dart';
-import '../theme/app_theme.dart';
+import '../widgets/auth/auth_button.dart';
+import '../widgets/auth/auth_text_field.dart';
+import '../widgets/common/form_error.dart';
+
+import 'package:flutter/services.dart';
 
 class AddressFormView extends StatefulWidget {
   final AddressModel? address;
@@ -46,6 +50,7 @@ class _AddressFormViewState extends State<AddressFormView> {
   int? _loadingRegion;
   int? _failedRegion;
   String? _regionError;
+  String? _submitError;
 
   late final TextEditingController _postalCtrl;
   late final TextEditingController _detailCtrl;
@@ -122,7 +127,7 @@ class _AddressFormViewState extends State<AddressFormView> {
     }
   }
 
-  Widget _regionDropdown(int level) => InputDecorator(
+  Widget _regionDropdown(int level, bool busy) => InputDecorator(
     decoration: InputDecoration(labelText: _regionLabels[level]),
     child: DropdownButtonHideUnderline(
       child: DropdownButton<String>(
@@ -130,7 +135,13 @@ class _AddressFormViewState extends State<AddressFormView> {
         value: _options[level].any((option) => option.code == _codes[level])
             ? _codes[level]
             : null,
-        hint: Text('Pilih ${_regionLabels[level]}'),
+        hint: Text(
+          level > 0 && _codes[level - 1] == null
+              ? 'Pilih ${_regionLabels[level - 1]} dahulu'
+              : 'Pilih ${_regionLabels[level]}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         items: _options[level]
             .map(
               (option) => DropdownMenuItem(
@@ -139,7 +150,7 @@ class _AddressFormViewState extends State<AddressFormView> {
               ),
             )
             .toList(),
-        onChanged: _loadingRegion != null || _options[level].isEmpty
+        onChanged: busy || _loadingRegion != null || _options[level].isEmpty
             ? null
             : (value) {
                 setState(() {
@@ -181,6 +192,9 @@ class _AddressFormViewState extends State<AddressFormView> {
 
     final controller = context.read<AddressController>();
 
+    if (controller.isSaving) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _submitError = null);
     final success = isEdit
         ? await controller.updateAddress(widget.address!.id, data)
         : await controller.createAddress(data);
@@ -200,10 +214,9 @@ class _AddressFormViewState extends State<AddressFormView> {
 
       Navigator.pop(context, true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(controller.errorMessage ?? 'Gagal menyimpan alamat.'),
-        ),
+      setState(
+        () =>
+            _submitError = controller.errorMessage ?? 'Gagal menyimpan alamat.',
       );
     }
   }
@@ -219,77 +232,35 @@ class _AddressFormViewState extends State<AddressFormView> {
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: controller,
-            keyboardType: keyboardType,
-            maxLines: maxLines,
-            maxLength: maxLength,
-            validator: validator ?? _validateRequired,
-            decoration: InputDecoration(
-              hintText: hint,
-              filled: true,
-              fillColor: AppTheme.surface,
-              counterText: '',
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppTheme.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(
-                  color: AppTheme.primaryDark,
-                  width: 1.5,
-                ),
-              ),
-            ),
-          ),
-        ],
+      child: AuthTextField(
+        controller: controller,
+        label: label,
+        hint: hint,
+        keyboardType: keyboardType,
+        maxLines: maxLines,
+        maxLength: maxLength,
+        validator: validator ?? _validateRequired,
+        enabled: !context.watch<AddressController>().isSaving,
+        inputFormatters: keyboardType == TextInputType.number
+            ? [FilteringTextInputFormatter.digitsOnly]
+            : null,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final saving = context.watch<AddressController>().isSaving;
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: Text(
-          isEdit ? 'Edit Alamat' : 'Tambah Alamat',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: AppTheme.background,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-      ),
+      appBar: AppBar(title: Text(isEdit ? 'Edit alamat' : 'Tambah alamat')),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.all(16),
           children: [
-            const Text(
-              'Informasi Penerima',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
+            Text('Informasi penerima', style: theme.textTheme.titleMedium),
             const SizedBox(height: 16),
 
             _buildField(
@@ -316,9 +287,9 @@ class _AddressFormViewState extends State<AddressFormView> {
 
             const SizedBox(height: 8),
 
-            const Text(
-              'Detail Alamat',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Text(
+              'Wilayah dan detail alamat',
+              style: theme.textTheme.titleMedium,
             ),
 
             const SizedBox(height: 16),
@@ -334,14 +305,13 @@ class _AddressFormViewState extends State<AddressFormView> {
             for (var level = 0; level < _regionLabels.length; level++)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: _regionDropdown(level),
+                child: _regionDropdown(level, saving),
               ),
-            if (_loadingRegion != null) const LinearProgressIndicator(),
-            if (_regionError != null)
-              Text(
-                _regionError!,
-                style: const TextStyle(color: AppTheme.error),
+            if (_loadingRegion case final level?)
+              LinearProgressIndicator(
+                semanticsLabel: 'Memuat ${_regionLabels[level]}',
               ),
+            if (_regionError case final message?) FormError(message),
             if (_failedRegion case final level?)
               TextButton(
                 onPressed: () => _loadRegion(level, restore: true),
@@ -372,66 +342,21 @@ class _AddressFormViewState extends State<AddressFormView> {
 
             const SizedBox(height: 8),
 
-            Container(
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.border),
-              ),
-              child: CheckboxListTile(
-                value: _isPrimary,
-                onChanged: (value) {
-                  setState(() {
-                    _isPrimary = value ?? false;
-                  });
-                },
-                title: const Text(
-                  'Jadikan alamat utama',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-                subtitle: const Text(
-                  'Gunakan alamat ini sebagai alamat pengiriman utama.',
-                  style: TextStyle(fontSize: 12),
-                ),
-                activeColor: AppTheme.primaryDark,
-                controlAffinity: ListTileControlAffinity.leading,
-              ),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _isPrimary,
+              onChanged: saving
+                  ? null
+                  : (value) => setState(() => _isPrimary = value ?? false),
+              title: const Text('Jadikan alamat utama'),
+              controlAffinity: ListTileControlAffinity.leading,
             ),
-
-            const SizedBox(height: 24),
-
-            Consumer<AddressController>(
-              builder: (context, controller, child) {
-                return SizedBox(
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: controller.isSaving ? null : _saveAddress,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryDark,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: controller.isSaving
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            isEdit ? 'Simpan Perubahan' : 'Simpan Alamat',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                  ),
-                );
-              },
+            const SizedBox(height: 16),
+            if (_submitError case final message?) FormError(message),
+            AuthButton(
+              text: isEdit ? 'Simpan perubahan' : 'Simpan alamat',
+              isLoading: saving,
+              onPressed: _loadingRegion == null ? _saveAddress : null,
             ),
           ],
         ),

@@ -15,11 +15,11 @@ class MainView extends StatefulWidget {
 class _MainViewState extends State<MainView> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    HomeView(), // Tab 0: Beranda
-    CartView(),
-    OrderView(),
-    ProfileView(), // Tab 3: Profil
+  late final List<Widget> _pages = [
+    const HomeView(),
+    const CartView(),
+    const OrderView(),
+    ProfileView(onOrders: () => setState(() => _currentIndex = 2)),
   ];
 
   @override

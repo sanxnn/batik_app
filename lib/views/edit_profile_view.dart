@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/auth_controller.dart';
+import '../widgets/auth/auth_button.dart';
+import '../widgets/auth/auth_text_field.dart';
+import '../widgets/auth/birth_date_field.dart';
+import '../widgets/common/form_error.dart';
 
 class EditProfileView extends StatefulWidget {
   const EditProfileView({super.key});
@@ -16,7 +20,8 @@ class _EditProfileViewState extends State<EditProfileView> {
   late TextEditingController _emailCtrl;
   late TextEditingController _phoneCtrl;
   late String _gender;
-  late DateTime _birthDate;
+  DateTime? _birthDate;
+  String? _submitError;
   bool _isInitialized = false;
 
   @override
@@ -36,8 +41,8 @@ class _EditProfileViewState extends State<EditProfileView> {
         _nameCtrl.text = user.name;
         _emailCtrl.text = user.email;
         _phoneCtrl.text = user.phone ?? '';
-        _gender = user.gender;
-        _birthDate = user.birthDate ?? DateTime(2000, 1, 1);
+        _gender = user.gender == 'Female' ? 'Female' : 'Male';
+        _birthDate = user.birthDate;
         _isInitialized = true;
       }
     }
@@ -51,259 +56,128 @@ class _EditProfileViewState extends State<EditProfileView> {
     super.dispose();
   }
 
-  Future<void> _pickBirthDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _birthDate,
-      firstDate: DateTime(1900),
-      lastDate: DateTime(now.year - 13, now.month, now.day),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Color(0xFF6D4C41)),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) setState(() => _birthDate = picked);
-  }
-
   Future<void> _handleUpdate() async {
     if (!_formKey.currentState!.validate()) return;
 
     final controller = context.read<AuthController>();
+    if (controller.isLoading) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _submitError = null);
     final success = await controller.updateProfile(
       name: _nameCtrl.text.trim(),
       email: _emailCtrl.text.trim(),
       gender: _gender,
-      birthDate: _birthDate,
+      birthDate: _birthDate!,
       phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
     );
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? '✅ Profil berhasil diperbarui'
-              : '❌ ${controller.errorMessage ?? "Gagal memperbarui"}',
-        ),
-        backgroundColor: success ? Colors.green[700] : Colors.red[700],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
-
-    if (success) {
-      if (controller.user?.isEmailVerified == false) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/verify-email',
-          (_) => false,
-          arguments: controller.user!.email,
-        );
-      } else {
-        Navigator.pop(context);
-      }
+    if (!success) {
+      setState(
+        () => _submitError =
+            controller.errorMessage ?? 'Profil gagal diperbarui.',
+      );
+      return;
     }
-  }
-
-  InputDecoration _inputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon, size: 20, color: Colors.grey[600]),
-      filled: true,
-      fillColor: Colors.grey[100],
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF6D4C41), width: 2),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Profil berhasil diperbarui.')),
     );
+
+    if (controller.user?.isEmailVerified == false) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/verify-email',
+        (_) => false,
+        arguments: controller.user!.email,
+      );
+    } else {
+      Navigator.pop(context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF6D4C41);
-
+    final busy = context.watch<AuthController>().isLoading;
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.black87,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Edit Profil',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: Colors.black87,
-            fontSize: 18,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Consumer<AuthController>(
-        builder: (context, controller, _) {
-          if (controller.user == null) {
-            return const Center(
-              child: CircularProgressIndicator(color: primaryColor),
-            );
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Informasi Dasar',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _nameCtrl,
-                    decoration: _inputDecoration(
-                      'Nama Lengkap',
-                      Icons.person_outline,
-                    ),
-                    validator: (v) => v == null || v.trim().isEmpty
-                        ? 'Nama wajib diisi'
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: _inputDecoration(
-                      'Alamat Email',
-                      Icons.email_outlined,
-                    ),
-                    validator: (v) => v == null || v.trim().isEmpty
-                        ? 'Email wajib diisi'
-                        : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _phoneCtrl,
-                    keyboardType: TextInputType.phone,
-                    decoration: _inputDecoration(
-                      'Nomor WhatsApp / HP',
-                      Icons.phone_outlined,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  const Text(
-                    'Informasi Pribadi',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  DropdownButtonFormField<String>(
-                    initialValue: _gender,
-                    decoration: _inputDecoration(
-                      'Jenis Kelamin',
-                      Icons.people_outline,
-                    ).copyWith(prefixIcon: null),
-                    items: const [
-                      DropdownMenuItem(value: 'Male', child: Text('Laki-laki')),
-                      DropdownMenuItem(
-                        value: 'Female',
-                        child: Text('Perempuan'),
-                      ),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) setState(() => _gender = v);
-                    },
-                    validator: (v) => v == null ? 'Pilih jenis kelamin' : null,
-                  ),
-                  const SizedBox(height: 16),
-
-                  InkWell(
-                    onTap: _pickBirthDate,
-                    child: InputDecorator(
-                      decoration: _inputDecoration(
-                        'Tanggal Lahir',
-                        Icons.calendar_today_outlined,
-                      ),
-                      child: Text(
-                        '${_birthDate.day.toString().padLeft(2, '0')}/'
-                        '${_birthDate.month.toString().padLeft(2, '0')}/'
-                        '${_birthDate.year}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: controller.isLoading ? null : _handleUpdate,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        elevation: 4,
-                        shadowColor: primaryColor.withValues(alpha: 0.3),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: controller.isLoading
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              'Simpan Perubahan',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
+      appBar: AppBar(title: const Text('Edit profil')),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (!_isInitialized)
+              const Text('Profil belum tersedia.')
+            else ...[
+              if (_submitError case final message?) FormError(message),
+              AuthTextField(
+                controller: _nameCtrl,
+                label: 'Nama lengkap',
+                hint: '',
+                enabled: !busy,
+                autofillHints: const [AutofillHints.name],
+                validator: (v) =>
+                    v?.trim().isNotEmpty == true ? null : 'Nama wajib diisi',
               ),
-            ),
-          );
-        },
+              const SizedBox(height: 16),
+              AuthTextField(
+                controller: _emailCtrl,
+                label: 'Email',
+                hint: 'nama@email.com',
+                enabled: !busy,
+                autofillHints: const [AutofillHints.email],
+                keyboardType: TextInputType.emailAddress,
+                validator: (v) =>
+                    RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+                        .hasMatch(v?.trim() ?? '')
+                    ? null
+                    : 'Masukkan email yang valid',
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Perubahan email memerlukan verifikasi ulang.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
+              AuthTextField(
+                controller: _phoneCtrl,
+                label: 'Nomor telepon (opsional)',
+                hint: '',
+                enabled: !busy,
+                keyboardType: TextInputType.phone,
+                autofillHints: const [AutofillHints.telephoneNumber],
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _gender,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Jenis kelamin'),
+                items: const [
+                  DropdownMenuItem(value: 'Male', child: Text('Laki-laki')),
+                  DropdownMenuItem(value: 'Female', child: Text('Perempuan')),
+                ],
+                onChanged: busy
+                    ? null
+                    : (v) {
+                        if (v != null) setState(() => _gender = v);
+                      },
+              ),
+              const SizedBox(height: 16),
+              BirthDateField(
+                value: _birthDate,
+                enabled: !busy,
+                onChanged: (date) => setState(() => _birthDate = date),
+              ),
+              const SizedBox(height: 24),
+              AuthButton(
+                text: 'Simpan perubahan',
+                onPressed: _handleUpdate,
+                isLoading: busy,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
