@@ -28,7 +28,7 @@
 
 ## Pesanan dan refund
 
-- **Pesanan Saya** berisi daftar berhalaman. Detail menampilkan barang, penerima, rincian biaya, status pembayaran, dan kurir serta nomor resi jika tersedia.
+- **Pesanan Saya** berisi daftar berhalaman. Detail menampilkan barang, penerima, rincian biaya, status pembayaran, kurir, serta perjalanan pesanan dari menunggu bayar hingga selesai. Nomor resi bisa disalin ketika tersedia.
 - Tekan **Konfirmasi pesanan diterima** setelah paket sampai. Aksi tersedia untuk pesanan berstatus `shipped` dengan pembayaran `success`. Backend kemudian menandai pesanan `completed`.
 - Pada pesanan yang memenuhi syarat, buka **Ajukan refund**. Isi alasan 20–2.000 karakter dan pilih satu foto JPEG, PNG, atau WebP maksimal 5 MB. Laravel menentukan nominal dari pembayaran.
 - Pantau hasil melalui **Status refund** di detail pesanan atau **Riwayat refund** di layar Pesanan. Detail menampilkan alasan, bukti, status, dan catatan admin apabila tersedia. Pelanggan bisa membatalkan pengajuan selama berstatus `pending`.
