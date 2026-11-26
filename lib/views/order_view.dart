@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../controllers/order_controller.dart';
 import '../models/order_model.dart';
-import '../theme/app_theme.dart';
+import '../widgets/orders/lifecycle_badge.dart';
 import '../widgets/common/content_state.dart';
 import 'order_detail_view.dart';
 import 'refund_history_view.dart';
@@ -84,7 +84,7 @@ class _OrderViewState extends State<OrderView> {
                   );
                 }
                 final order = controller.orders[index];
-                return Card(
+                return Card.outlined(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(16),
@@ -97,14 +97,14 @@ class _OrderViewState extends State<OrderView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(orderStatusLabel(order.status)),
+                          OrderStatusBadge(status: order.status),
                           if (order.createdAt != null)
                             Text(
                               '${order.createdAt!.toLocal().day}/${order.createdAt!.toLocal().month}/${order.createdAt!.toLocal().year}',
                             ),
                           Text(
                             formatRupiah(order.total),
-                            style: const TextStyle(color: AppTheme.textPrimary),
+                            style: Theme.of(context).textTheme.labelLarge,
                           ),
                         ],
                       ),
@@ -129,14 +129,3 @@ class _OrderViewState extends State<OrderView> {
     );
   }
 }
-
-String orderStatusLabel(String status) => switch (status) {
-  'pending_payment' => 'Menunggu pembayaran',
-  'paid' => 'Sudah dibayar',
-  'processing' => 'Diproses',
-  'packing' => 'Dikemas',
-  'shipped' => 'Dikirim',
-  'completed' => 'Selesai',
-  'cancelled' => 'Dibatalkan',
-  _ => status,
-};

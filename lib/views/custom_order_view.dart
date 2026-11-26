@@ -9,6 +9,11 @@ import '../core/network/image_url.dart';
 import '../core/utils/image_files.dart';
 import '../models/custom_order_model.dart';
 import '../models/order_model.dart';
+import '../widgets/auth/auth_button.dart';
+import '../widgets/catalog/catalog_image.dart';
+import '../widgets/common/content_state.dart';
+import '../widgets/common/form_error.dart';
+import '../widgets/orders/lifecycle_badge.dart';
 import 'address_view.dart';
 import 'order_detail_view.dart';
 
@@ -21,6 +26,9 @@ class CustomOrderView extends StatefulWidget {
 
 class _CustomOrderViewState extends State<CustomOrderView> {
   final _description = TextEditingController();
+  final _requestForm = GlobalKey<FormState>();
+  bool _preparingQuote = false;
+  String? _submitError;
   List<XFile> _attachments = [];
   bool _pickingFiles = false;
 
@@ -104,7 +112,6 @@ class _CustomOrderViewState extends State<CustomOrderView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<CustomOrderController>().load(refresh: true);
-      context.read<AddressController>().fetchAddresses();
     });
   }
 
@@ -115,21 +122,20 @@ class _CustomOrderViewState extends State<CustomOrderView> {
   }
 
   Future<void> _create() async {
+    if (!_requestForm.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _submitError = null);
     final text = _description.text.trim();
-    if (text.length < 10) {
-      _message('Deskripsi minimal 10 karakter.', error: true);
-      return;
-    }
     final created = await context.read<CustomOrderController>().create(
       text,
       attachments: _attachments,
     );
     if (!mounted) return;
     if (created == null) {
-      _message(
-        context.read<CustomOrderController>().errorMessage ??
+      setState(
+        () => _submitError =
+            context.read<CustomOrderController>().errorMessage ??
             'Custom order gagal dibuat.',
-        error: true,
       );
       return;
     }
@@ -139,43 +145,49 @@ class _CustomOrderViewState extends State<CustomOrderView> {
   }
 
   Future<void> _approve(CustomOrderModel order) async {
+    if (_preparingQuote) return;
+    setState(() => _preparingQuote = true);
     final addresses = context.read<AddressController>();
-    await addresses.fetchAddresses();
-    if (!mounted) return;
-    if (addresses.errorMessage != null) {
-      _message(addresses.errorMessage!, error: true);
-      return;
-    }
-    if (addresses.addresses.isEmpty) {
+    try {
+      await addresses.fetchAddresses();
+      if (!mounted) return;
+      if (addresses.errorMessage != null) {
+        _message(addresses.errorMessage!, error: true);
+        return;
+      }
+      if (addresses.addresses.isEmpty) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AddressView()),
+        );
+        return;
+      }
+      final selection = await showDialog<({int addressId, String notes})>(
+        context: context,
+        builder: (_) => _QuotationDialog(addresses: addresses, order: order),
+      );
+      if (!mounted || selection == null) return;
+      final controller = context.read<CustomOrderController>();
+      final orderId = await controller.approve(
+        order.id,
+        addressId: selection.addressId,
+        notes: selection.notes,
+      );
+      if (!mounted) return;
+      if (orderId == null) {
+        _message(
+          controller.errorMessage ?? 'Penawaran gagal disetujui.',
+          error: true,
+        );
+        return;
+      }
       await Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const AddressView()),
+        MaterialPageRoute(builder: (_) => OrderDetailView(orderId: orderId)),
       );
-      return;
+    } finally {
+      if (mounted) setState(() => _preparingQuote = false);
     }
-    final selection = await showDialog<({int addressId, String notes})>(
-      context: context,
-      builder: (context) => _QuotationDialog(addresses: addresses),
-    );
-    if (!mounted || selection == null) return;
-    final orderId = await context.read<CustomOrderController>().approve(
-      order.id,
-      addressId: selection.addressId,
-      notes: selection.notes,
-    );
-    if (!mounted) return;
-    if (orderId == null) {
-      _message(
-        context.read<CustomOrderController>().errorMessage ??
-            'Quotation gagal disetujui.',
-        error: true,
-      );
-      return;
-    }
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => OrderDetailView(orderId: orderId)),
-    );
   }
 
   void _message(String message, {bool error = false}) {
@@ -190,142 +202,113 @@ class _CustomOrderViewState extends State<CustomOrderView> {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<CustomOrderController>();
-    final busy = controller.isSaving || _pickingFiles;
+    final busy = controller.isSaving || _pickingFiles || _preparingQuote;
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Custom Order')),
       body: RefreshIndicator(
         onRefresh: () => controller.load(refresh: true),
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          physics: const AlwaysScrollableScrollPhysics(),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
-            const Text(
-              'Pesan produk sesuai kebutuhanmu',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Jelaskan motif, warna, ukuran, dan kebutuhan lainnya. Admin akan meninjau dan mengirim quotation.',
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _description,
-              enabled: !busy,
-              minLines: 5,
-              maxLines: 8,
-              decoration: const InputDecoration(
-                labelText: 'Deskripsi pesanan',
-                hintText: 'Contoh: batik tulis motif bunga warna biru...',
-              ),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: busy
-                  ? null
-                  : () async {
-                      final files = await _pickFiles(5);
-                      if (mounted && files.isNotEmpty) {
-                        setState(() => _attachments = files);
-                      }
-                    },
-              child: Text(
-                _attachments.isEmpty
-                    ? 'Pilih lampiran (opsional)'
-                    : 'Ganti lampiran',
-              ),
-            ),
-            for (final file in _attachments)
-              ListTile(
-                title: Text(file.name),
-                trailing: IconButton(
-                  tooltip: 'Hapus lampiran',
-                  onPressed: busy
-                      ? null
-                      : () => setState(() => _attachments.remove(file)),
-                  icon: const Icon(Icons.close),
-                ),
-              ),
-            FilledButton(
-              onPressed: busy ? null : _create,
-              child: Text(
-                controller.isSaving ? 'Mengirim...' : 'Kirim custom order',
-              ),
-            ),
-            if (controller.errorMessage != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                controller.errorMessage!,
-                style: const TextStyle(color: AppTheme.error),
-              ),
-            ],
-            const SizedBox(height: 24),
-            const Text(
-              'Riwayat custom order',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 8),
-            if (controller.isLoading && controller.orders.isEmpty)
-              const Center(child: CircularProgressIndicator()),
-            for (final order in controller.orders)
-              Card(
-                child: ExpansionTile(
-                  title: Text(order.referenceNumber),
-                  subtitle: Text(order.statusLabel),
-                  childrenPadding: const EdgeInsets.all(16),
-                  expandedCrossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(order.description),
-                    if (order.estimatedPrice case final price?)
-                      Text('Penawaran: ${formatRupiah(price)}'),
-                    if (order.estimatedTime case final time?)
-                      Text('Estimasi: $time'),
-                    if (order.adminNotes case final notes?)
-                      Text('Catatan admin: $notes'),
-                    if (order.attachmentPaths.isNotEmpty)
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final path in order.attachmentPaths)
-                            Image.network(
-                              productImageUrl(path),
-                              width: 85,
-                              height: 85,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) =>
-                                  const Icon(Icons.broken_image_outlined),
-                            ),
-                        ],
+            Card.outlined(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _requestForm,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Ajukan pesanan custom',
+                        style: theme.textTheme.titleLarge,
                       ),
-                    if (order.status == 'pending_review' &&
-                        order.attachmentPaths.length < 5)
-                      TextButton(
-                        onPressed: busy ? null : () => _append(order),
-                        child: const Text('Tambah lampiran'),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Jelaskan motif, warna, dan ukuran agar admin bisa menyiapkan penawaran.',
                       ),
-                    if (order.status == 'quoted')
-                      FilledButton(
-                        onPressed: busy ? null : () => _approve(order),
-                        child: const Text('Setujui penawaran'),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _description,
+                        enabled: !busy,
+                        minLines: 3,
+                        maxLines: 6,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: (value) => (value?.trim().length ?? 0) < 10
+                            ? 'Isi minimal 10 karakter.'
+                            : null,
+                        decoration: const InputDecoration(
+                          labelText: 'Deskripsi pesanan',
+                        ),
                       ),
-                    if (order.status == 'pending_review' ||
-                        order.status == 'quoted')
-                      TextButton(
-                        onPressed: busy ? null : () => _cancel(order),
-                        child: const Text('Batalkan custom order'),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Lampiran (opsional)',
+                        style: theme.textTheme.titleSmall,
                       ),
-                    if (order.orderId case final id?)
-                      TextButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => OrderDetailView(orderId: id),
+                      const Text('Maksimal 5 foto · 2 MB per foto'),
+                      const SizedBox(height: 6),
+                      OutlinedButton.icon(
+                        onPressed: busy
+                            ? null
+                            : () async {
+                                final files = await _pickFiles(5);
+                                if (mounted && files.isNotEmpty) {
+                                  setState(() => _attachments = files);
+                                }
+                              },
+                        icon: const Icon(Icons.attach_file_rounded),
+                        label: Text(
+                          _attachments.isEmpty
+                              ? 'Pilih lampiran'
+                              : 'Ganti lampiran',
+                        ),
+                      ),
+                      for (final file in _attachments)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(file.name),
+                          trailing: IconButton(
+                            tooltip: 'Hapus lampiran',
+                            onPressed: busy
+                                ? null
+                                : () =>
+                                      setState(() => _attachments.remove(file)),
+                            icon: const Icon(Icons.close_rounded),
                           ),
                         ),
-                        child: const Text('Lihat pesanan'),
+                      const SizedBox(height: 12),
+                      if (_submitError case final message?) FormError(message),
+                      AuthButton(
+                        text: 'Kirim custom order',
+                        onPressed: busy ? null : _create,
+                        isLoading: controller.isSaving,
                       ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
+            ),
+            const SizedBox(height: 24),
+            Text('Riwayat custom order', style: theme.textTheme.titleLarge),
+            const SizedBox(height: 8),
+            if (controller.isLoading)
+              const LinearProgressIndicator(
+                semanticsLabel: 'Memuat custom order',
+              )
+            else if (controller.orders.isEmpty)
+              ContentState(
+                icon: Icons.design_services_outlined,
+                message: controller.errorMessage ?? 'Belum ada custom order.',
+                onRetry: controller.errorMessage == null
+                    ? null
+                    : () => controller.load(refresh: true),
+              ),
+            for (final order in controller.orders)
+              _requestCard(context, order, busy),
             if (controller.canLoadMore)
               TextButton(
                 onPressed: () => controller.load(),
@@ -336,11 +319,93 @@ class _CustomOrderViewState extends State<CustomOrderView> {
       ),
     );
   }
+
+  Widget _requestCard(BuildContext context, CustomOrderModel order, bool busy) {
+    final theme = Theme.of(context);
+    final (icon, tone) = switch (order.status) {
+      'quoted' => (Icons.request_quote_outlined, LifecycleTone.active),
+      'approved' => (
+        Icons.check_circle_outline_rounded,
+        LifecycleTone.positive,
+      ),
+      'cancelled' ||
+      'rejected' => (Icons.cancel_outlined, LifecycleTone.negative),
+      _ => (Icons.schedule_rounded, LifecycleTone.neutral),
+    };
+    return Card.outlined(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ExpansionTile(
+        title: Text(order.referenceNumber, style: theme.textTheme.titleSmall),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            LifecycleBadge(label: order.statusLabel, icon: icon, tone: tone),
+            if (order.estimatedPrice case final price?)
+              Text('Penawaran ${formatRupiah(price)}'),
+          ],
+        ),
+        childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(order.description),
+          if (order.estimatedTime case final time?) Text('Estimasi: $time'),
+          if (order.adminNotes case final notes?) Text('Catatan admin: $notes'),
+          if (order.attachmentPaths.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (index, path) in order.attachmentPaths.indexed)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox.square(
+                      dimension: 78,
+                      child: CatalogImage(
+                        url: productImageUrl(path),
+                        label: 'Lampiran ${index + 1}',
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+          if (order.status == 'pending_review' &&
+              order.attachmentPaths.length < 5)
+            TextButton.icon(
+              onPressed: busy ? null : () => _append(order),
+              icon: const Icon(Icons.attach_file_rounded),
+              label: const Text('Tambah lampiran'),
+            ),
+          if (order.status == 'quoted')
+            FilledButton(
+              onPressed: busy ? null : () => _approve(order),
+              child: const Text('Setujui penawaran'),
+            ),
+          if (order.status == 'pending_review' || order.status == 'quoted')
+            TextButton(
+              onPressed: busy ? null : () => _cancel(order),
+              child: const Text('Batalkan custom order'),
+            ),
+          if (order.orderId case final id?)
+            TextButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => OrderDetailView(orderId: id)),
+              ),
+              child: const Text('Lihat pesanan'),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _QuotationDialog extends StatefulWidget {
   final AddressController addresses;
-  const _QuotationDialog({required this.addresses});
+  final CustomOrderModel order;
+  const _QuotationDialog({required this.addresses, required this.order});
 
   @override
   State<_QuotationDialog> createState() => _QuotationDialogState();
@@ -365,6 +430,12 @@ class _QuotationDialogState extends State<_QuotationDialog> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (widget.order.estimatedPrice case final price?)
+            Text(
+              'Penawaran ${formatRupiah(price)}',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          const SizedBox(height: 12),
           DropdownButtonFormField<int>(
             initialValue: _addressId,
             isExpanded: true,
@@ -383,6 +454,7 @@ class _QuotationDialogState extends State<_QuotationDialog> {
               if (value != null) _addressId = value;
             },
           ),
+          const SizedBox(height: 12),
           TextField(
             controller: _notes,
             decoration: const InputDecoration(labelText: 'Catatan (opsional)'),

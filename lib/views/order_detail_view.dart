@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/order_controller.dart';
@@ -6,7 +7,10 @@ import '../core/network/payment_launcher.dart';
 import '../models/order_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/checkout/checkout_steps.dart';
-import 'order_view.dart';
+import '../widgets/common/content_state.dart';
+import '../widgets/common/form_error.dart';
+import '../widgets/orders/lifecycle_badge.dart';
+import '../widgets/orders/order_timeline.dart';
 import 'refund_view.dart';
 
 class OrderDetailView extends StatefulWidget {
@@ -32,6 +36,7 @@ class _OrderDetailViewState extends State<OrderDetailView>
   bool _loading = false;
   bool _launchingPayment = false;
   String? _paymentToken;
+  String? _refreshError;
 
   @override
   void initState() {
@@ -55,13 +60,16 @@ class _OrderDetailViewState extends State<OrderDetailView>
 
   Future<void> _refresh() async {
     if (!mounted || _loading) return;
-    setState(() => _loading = true);
-    final updated = await context.read<OrderController>().refreshDetail(
-      widget.orderId,
-    );
+    setState(() {
+      _loading = true;
+      _refreshError = null;
+    });
+    final controller = context.read<OrderController>();
+    final updated = await controller.refreshDetail(widget.orderId);
     if (!mounted) return;
     setState(() {
       _order = updated ?? _order;
+      _refreshError = updated == null ? controller.errorMessage : null;
       if (updated != null && updated.status != 'pending_payment') {
         _paymentToken = null;
       }
@@ -194,6 +202,15 @@ class _OrderDetailViewState extends State<OrderDetailView>
     );
   }
 
+  Future<void> _copyTrackingNumber(String number) async {
+    try {
+      await Clipboard.setData(ClipboardData(text: number));
+      if (mounted) _message('Nomor resi disalin.');
+    } catch (_) {
+      if (mounted) _message('Nomor resi tidak dapat disalin.', error: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final order = _order;
@@ -201,135 +218,193 @@ class _OrderDetailViewState extends State<OrderDetailView>
         _loading ||
         _launchingPayment ||
         context.watch<OrderController>().isSaving;
+    final theme = Theme.of(context);
+    final payment = switch (order?.paymentStatus) {
+      'success' => 'Berhasil',
+      'pending' => 'Menunggu pembayaran',
+      'failed' => 'Gagal',
+      'expire' => 'Kedaluwarsa',
+      _ => null,
+    };
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Detail Pesanan'),
+        title: const Text('Detail pesanan'),
         actions: [
           IconButton(
-            onPressed: _loading ? null : _refresh,
-            icon: const Icon(Icons.refresh),
+            onPressed: busy ? null : _refresh,
+            icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Perbarui status',
           ),
         ],
       ),
       body: order == null
-          ? Center(
-              child: _loading
-                  ? const CircularProgressIndicator()
-                  : const Text('Pesanan tidak ditemukan.'),
-            )
+          ? _loading
+                ? const ContentLoading(label: 'Memuat detail pesanan')
+                : ContentState(
+                    icon: Icons.receipt_long_outlined,
+                    message: _refreshError ?? 'Pesanan belum tersedia.',
+                    onRetry: _refresh,
+                  )
           : ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
                 if (widget.checkoutPaymentStep) ...[
                   const CheckoutSteps(step: 3),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Pesanan dibuat',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 16),
                 ],
-                Text(
-                  order.number,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(orderStatusLabel(order.status)),
-                if (order.paymentStatus != null)
-                  Text('Pembayaran: ${order.paymentStatus}'),
-                const Divider(height: 32),
-                Text('Produk', style: Theme.of(context).textTheme.titleMedium),
-                if (order.items.isEmpty)
-                  Text(
-                    order.isCustomOrder
-                        ? 'Pesanan custom'
-                        : 'Detail produk belum tersedia.',
+                if (_loading)
+                  const LinearProgressIndicator(
+                    semanticsLabel: 'Memperbarui pesanan',
                   ),
-                for (final item in order.items)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(item.name),
-                    subtitle: Text('${item.variant} • ${item.quantity} item'),
-                    trailing: Text(formatRupiah(item.subtotal)),
-                  ),
-                const Divider(height: 32),
-                if (order.recipient != null)
-                  Text('Penerima: ${order.recipient}'),
-                if (order.shippingAddress != null) Text(order.shippingAddress!),
-                if (order.courier?.isNotEmpty == true)
-                  Text('Kurir: ${order.courier}'),
-                if (order.trackingNumber?.isNotEmpty == true)
-                  Text('Nomor resi: ${order.trackingNumber}'),
-                const SizedBox(height: 16),
-                _amount('Subtotal', order.subtotal),
-                _amount('Diskon', -order.discount),
-                _amount('Ongkir', order.shippingCost),
-                const Divider(),
-                _amount(
-                  order.paymentStatus == 'success'
-                      ? 'Total dibayar'
-                      : 'Total pesanan',
-                  order.total,
-                  strong: true,
-                ),
-                const SizedBox(height: 24),
-                if (order.status == 'pending_payment' &&
-                    order.paymentStatus != 'success') ...[
-                  FilledButton(
-                    onPressed: busy ? null : _pay,
-                    child: Text(
-                      _launchingPayment
-                          ? 'Membuka pembayaran…'
-                          : 'Lanjutkan pembayaran',
+                if (_refreshError case final message?) FormError(message),
+                _section(
+                  context,
+                  widget.checkoutPaymentStep ? 'Pesanan dibuat' : order.number,
+                  [
+                    if (widget.checkoutPaymentStep) Text(order.number),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OrderStatusBadge(status: order.status),
                     ),
+                    if (payment != null) Text('Pembayaran: $payment'),
+                    if (order.status == 'pending_payment' &&
+                        order.paymentStatus != 'success') ...[
+                      _amount('Total pesanan', order.total, strong: true),
+                      FilledButton.icon(
+                        onPressed: busy ? null : _pay,
+                        icon: const Icon(Icons.payments_outlined),
+                        label: Text(
+                          _launchingPayment
+                              ? 'Membuka pembayaran…'
+                              : 'Lanjutkan pembayaran',
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: busy ? null : _cancel,
+                        child: const Text('Batalkan pesanan'),
+                      ),
+                    ],
+                    if (order.canComplete)
+                      FilledButton.icon(
+                        onPressed: busy ? null : _complete,
+                        icon: const Icon(Icons.done_rounded),
+                        label: const Text('Konfirmasi pesanan diterima'),
+                      ),
+                  ],
+                ),
+                _section(context, 'Perjalanan pesanan', [
+                  OrderTimeline(
+                    status: order.status,
+                    paymentSucceeded: order.paymentStatus == 'success',
                   ),
-                  TextButton(
-                    onPressed: busy ? null : _cancel,
-                    child: const Text('Batalkan pesanan'),
+                ]),
+                if (order.shippingAddress != null ||
+                    order.recipient != null ||
+                    order.courier?.isNotEmpty == true ||
+                    order.trackingNumber?.isNotEmpty == true)
+                  _section(context, 'Pengiriman', [
+                    if (order.recipient != null)
+                      Text(order.recipient!, style: theme.textTheme.titleSmall),
+                    if (order.shippingAddress != null)
+                      Text(order.shippingAddress!),
+                    if (order.courier?.isNotEmpty == true)
+                      Text('Kurir: ${order.courier}'),
+                    if (order.trackingNumber case final number?
+                        when number.isNotEmpty)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Nomor resi\n$number',
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Salin nomor resi',
+                            onPressed: () => _copyTrackingNumber(number),
+                            icon: const Icon(Icons.copy_rounded),
+                          ),
+                        ],
+                      ),
+                  ]),
+                _section(context, 'Ringkasan biaya', [
+                  if (order.items.isEmpty)
+                    Text(
+                      order.isCustomOrder
+                          ? 'Pesanan custom'
+                          : 'Detail produk belum tersedia.',
+                    ),
+                  for (final item in order.items)
+                    _amount(
+                      '${item.name}\n${item.variant} × ${item.quantity}',
+                      item.subtotal,
+                    ),
+                  const Divider(),
+                  _amount('Subtotal', order.subtotal),
+                  if (order.discount != 0) _amount('Diskon', -order.discount),
+                  _amount('Ongkir', order.shippingCost),
+                  _amount(
+                    order.paymentStatus == 'success'
+                        ? 'Total dibayar'
+                        : 'Total pesanan',
+                    order.total,
+                    strong: true,
                   ),
-                ],
-                if (order.canComplete)
-                  FilledButton(
-                    onPressed: busy ? null : _complete,
-                    child: const Text('Konfirmasi pesanan diterima'),
-                  ),
-                if (order.refund case final refund?)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Status refund'),
-                    subtitle: Text(refund.statusLabel),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: busy ? null : () => _openRefund(refundId: refund.id),
-                  ),
-                if (order.canRequestRefund)
-                  OutlinedButton(
-                    onPressed: busy ? null : () => _openRefund(),
-                    child: const Text('Ajukan refund'),
-                  ),
+                ]),
+                if (order.refund != null || order.canRequestRefund)
+                  _section(context, 'Refund', [
+                    if (order.refund case final refund?) ...[
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: RefundStatusBadge(
+                          status: refund.status,
+                          label: refund.statusLabel,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: busy
+                            ? null
+                            : () => _openRefund(refundId: refund.id),
+                        child: const Text('Lihat detail refund'),
+                      ),
+                    ],
+                    if (order.canRequestRefund)
+                      OutlinedButton(
+                        onPressed: busy ? null : () => _openRefund(),
+                        child: const Text('Ajukan refund'),
+                      ),
+                  ]),
               ],
             ),
     );
   }
 
-  Widget _amount(String label, int amount, {bool strong = false}) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontWeight: strong ? FontWeight.bold : FontWeight.normal,
+  Widget _section(BuildContext context, String title, List<Widget> children) =>
+      Card.outlined(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
+              for (final child in children) ...[
+                const SizedBox(height: 8),
+                child,
+              ],
+            ],
           ),
         ),
-        Text(
-          formatRupiah(amount),
-          style: TextStyle(
-            fontWeight: strong ? FontWeight.bold : FontWeight.normal,
-          ),
+      );
+
+  Widget _amount(String label, int amount, {bool strong = false}) =>
+      DefaultTextStyle.merge(
+        style: strong ? const TextStyle(fontWeight: FontWeight.w700) : null,
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          spacing: 12,
+          runSpacing: 4,
+          children: [Text(label), Text(formatRupiah(amount))],
         ),
-      ],
-    ),
-  );
+      );
 }
