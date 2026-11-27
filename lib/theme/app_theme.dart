@@ -13,6 +13,7 @@ class AppTheme {
   static const Color background = Color(0xFFFAFAF8);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color border = Color(0xFFE7E5E4);
+  static const Color controlBorder = Color(0xFF918576);
 
   // Text colors
   static const Color textPrimary = Color(0xFF252525);
@@ -22,6 +23,7 @@ class AppTheme {
   // Status colors
   static const Color error = Color(0xFF991B1B);
   static const Color success = Color(0xFF166534);
+  static const Color successContainer = Color(0xFFDCFCE7);
 
   static const double radiusSmall = 12;
   static const double radiusMedium = 16;
@@ -43,7 +45,7 @@ class AppTheme {
         surface: surface,
         onSurface: textPrimary,
         onSurfaceVariant: textSecondary,
-        outline: textHint,
+        outline: controlBorder,
         outlineVariant: border,
         error: error,
         onError: Colors.white,
@@ -70,7 +72,7 @@ class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMedium),
-          borderSide: const BorderSide(color: border),
+          borderSide: const BorderSide(color: controlBorder),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMedium),
@@ -134,7 +136,7 @@ class AppTheme {
           foregroundColor: textPrimary,
           backgroundColor: background,
           minimumSize: const Size(double.infinity, 53),
-          side: const BorderSide(color: border),
+          side: const BorderSide(color: controlBorder),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMedium),
           ),

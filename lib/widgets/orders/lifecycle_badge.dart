@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_theme.dart';
+
 enum LifecycleTone { active, neutral, positive, negative }
 
 class LifecycleBadge extends StatelessWidget {
@@ -27,10 +29,7 @@ class LifecycleBadge extends StatelessWidget {
         colors.surfaceContainerHighest,
         colors.onSurfaceVariant,
       ),
-      LifecycleTone.positive => (
-        const Color(0xFFDCFCE7),
-        const Color(0xFF166534),
-      ),
+      LifecycleTone.positive => (AppTheme.successContainer, AppTheme.success),
       LifecycleTone.negative => (
         colors.errorContainer,
         colors.onErrorContainer,

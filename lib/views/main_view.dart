@@ -17,17 +17,32 @@ class _MainViewState extends State<MainView> {
 
   late final List<Widget> _pages = [
     const HomeView(),
-    CartView(onBrowse: () => setState(() => _currentIndex = 0)),
+    CartView(onBrowse: () => _selectTab(0)),
     const OrderView(),
-    ProfileView(onOrders: () => setState(() => _currentIndex = 2)),
+    ProfileView(onOrders: () => _selectTab(2)),
   ];
+
+  void _selectTab(int index) {
+    if (index == _currentIndex) return;
+    setState(() => _currentIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _pages),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          for (final (index, page) in _pages.indexed)
+            ExcludeFocus(
+              excluding: index != _currentIndex,
+              child: TickerMode(enabled: index == _currentIndex, child: page),
+            ),
+        ],
+      ),
       bottomNavigationBar: DecoratedBox(
+        position: DecorationPosition.foreground,
         decoration: BoxDecoration(
           border: Border(
             top: BorderSide(
@@ -37,8 +52,7 @@ class _MainViewState extends State<MainView> {
         ),
         child: NavigationBar(
           selectedIndex: _currentIndex,
-          onDestinationSelected: (index) =>
-              setState(() => _currentIndex = index),
+          onDestinationSelected: _selectTab,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
           animationDuration: reduceMotion
               ? Duration.zero

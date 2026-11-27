@@ -68,3 +68,10 @@ Validasi rilis di Android dan iOS untuk secure storage, pemilihan foto, pembukaa
 | Bukti refund gagal dibuka | Periksa sesi pelanggan, kepemilikan refund, dan respons byte gambar. Hindari mencatat token, isi bukti, atau data pelanggan pada laporan masalah. |
 
 [Indeks dokumentasi](README.md) · [Alur sistem](alur-sistem.md)
+
+## Regresi visual
+
+- Uji lebar 320 dp dan teks 200% pada formulir dengan keyboard terbuka, navigasi tab, dan langkah checkout.
+- Pastikan isi tab mempertahankan posisi gulir, sementara fokus keyboard hanya masuk ke tab aktif. Aktifkan Reduce Motion untuk memeriksa perpindahan tab dan feedback tambah ke keranjang.
+- Verifikasi status kosong, loading, gagal, sukses, dan label utama terhadap [panduan desain](panduan-desain-ui.md). Gunakan akun dan bukti fiktif untuk screenshot.
+- Pengujian Web dengan simulasi RajaOngkir dan Snap mencakup integrasi aplikasi dengan Laravel lokal. Pengujian provider Midtrans sandbox dan perangkat Android/iOS dilakukan secara terpisah sebelum rilis.
